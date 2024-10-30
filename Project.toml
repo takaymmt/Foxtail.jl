@@ -1,0 +1,13 @@
+name = "Foxtail"
+uuid = "cac871c8-24cd-45c7-943a-574f1c9f15e5"
+authors = ["Taka YMMT <dev@ymmt.cc>"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.11"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
