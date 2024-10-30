@@ -4,7 +4,7 @@
 
 Foxtail is a high-performance library for technical analysis indicators. It achieves exceptional speed by implementing incremental calculations for each indicator. Currently, the time series data input/output is dependent on TSFrames.
 
-### Prerequisites
+## Prerequisites
 
 -   TSFrames
 
