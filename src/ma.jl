@@ -14,17 +14,16 @@ function fit!(ind::iSMA{T}, price::T) where T
 end
 
 # Exponential Moving Average
-@prep_SISO EMA result
+@prep_SISO EMA result alpha
 
 function fit!(ind::iEMA{T}, price::T) where T
 	if isfull(ind)
-		alpha = 2 / (1 + capacity(ind))
-		ind._result = price * alpha + ind._result * (1 - alpha)
 		push!(ind, price)
+		ind._result = price * ind._alpha + ind._result * (1 - ind._alpha)
 	else
 		push!(ind, price)
-		alpha = 2 / (1 + length(ind))
-		ind._result = price * alpha + ind._result * (1 - alpha)
+		ind._alpha = 2 / (1 + length(ind))
+		ind._result = price * ind._alpha + ind._result * (1 - ind._alpha)
 	end
 	return ind._result
 end
@@ -306,3 +305,25 @@ export ALMA
 #     return result
 # end
 # export calculate_alma
+
+@prep_SISO ZLEMA result alpha lag(0::Int)
+
+function fit!(ind::iZLEMA{T}, price::T) where T
+	if isfull(ind)
+		push!(ind, price)
+		EmaData = 2 * price - ind.cb[ind._lag]
+		ind._result = EmaData * ind._alpha + ind._result * (1 - ind._alpha)
+	else
+		push!(ind, price)
+		period = length(ind)
+		if period == 1
+			ind._result = price
+		else
+			ind._lag = - round(Int, (period-1) / 2)
+			ind._alpha = 2 / (1 + period)
+			EmaData = 2 * price - ind.cb[ind._lag]
+			ind._result = EmaData * ind._alpha + ind._result * (1 - ind._alpha)
+		end
+	end
+	return ind._result
+end

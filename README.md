@@ -35,6 +35,7 @@ ema = EMA(ts, 50)
     -   TEMA
     -   TMA (TRIMA)
     -   WMA
+    -   ZLEMA
 
 ## Acknowledgments
 
