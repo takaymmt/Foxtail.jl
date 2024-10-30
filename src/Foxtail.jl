@@ -1,6 +1,6 @@
 module Foxtail
 
-using TSFrames
+using TSFrames, LinearAlgebra
 
 export
 	CircBuff,

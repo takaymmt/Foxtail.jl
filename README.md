@@ -25,6 +25,7 @@ ema = EMA(ts, 50)
 ## Support Indicators
 
 -   Moving Average
+    -   ALMA
     -   DEMA
     -   EMA
     -   HMA

@@ -202,7 +202,7 @@ macro prep_SISO(indicator, fields...)
         end
 
         # Define internal calculation function
-        function $(esc(internal_func_name))(prices::Vector, period::Int, $([:($field::$(param_types[field])) for field in param_fields]...))
+        @inline function $(esc(internal_func_name))(prices::Vector, period::Int, $([:($field::$(param_types[field])) for field in param_fields]...))
             ind = $(esc(struct_name)){eltype(prices)}(period, $(param_fields...))
             return map(x -> fit!(ind, x), prices)
         end
@@ -221,132 +221,6 @@ macro prep_SISO(indicator, fields...)
         export $(esc(indicator))
     end
 end
-
-
-# macro prep_SISO(indicator, fields...)
-#     # Parse fields into regular and parameterized fields
-#     regular_fields = Symbol[]
-#     param_fields = Symbol[]
-#     param_types = Dict{Symbol, Any}()
-#     default_values = Dict{Symbol, Any}()
-
-#     for field in fields
-#         if field isa Symbol
-#             push!(regular_fields, field)
-#         elseif field.head == :call
-#             field_name = field.args[1]
-#             type_expr = field.args[2]
-
-#             if type_expr.head == :(::)
-#                 push!(param_fields, field_name)
-#                 param_types[field_name] = type_expr.args[2]
-#                 default_values[field_name] = type_expr.args[1]
-#             else
-#                 error("Parameterized fields must include type annotations: $field_name(value::Type)")
-#             end
-#         else
-#             error("Invalid field specification: $field")
-#         end
-#     end
-
-#     # Generate struct and function names
-#     struct_name = Symbol(:i, indicator)
-#     func_name = QuoteNode(indicator)
-#     internal_func_name = Symbol(:_, indicator)
-
-#     # Prepare field definitions
-#     field_expressions = vcat(
-#         [:($(Symbol(:_, field))::Float64) for field in regular_fields],
-#         [:($(Symbol(:_, field))::$(param_types[field])) for field in param_fields]
-#     )
-
-#     # Prepare constructor initialization expressions
-#     init_expressions = vcat(
-#         [:(zero(Float64)) for _ in regular_fields],
-#         [Symbol(field) for field in param_fields]
-#     )
-
-#     # Prepare constructor parameters
-#     constructor_params = vcat(
-#         [:(period::Int)],
-#         [:($(field)::$(param_types[field])) for field in param_fields]
-#     )
-
-#     # # Prepare function parameters
-#     # function_params = [:(ts::TSFrame), :(period::Int)]
-#     # keyword_params = [
-#     #     :(field::Symbol = :Close),
-#     #     [:($(field)::$(param_types[field]) = $(default_values[field])) for field in param_fields]...
-#     # ]
-
-#     # internal_params = [:(prices::Vector), :(period::Int)]
-
-#     # Add documentation for generated struct
-#     struct_doc = """
-#         $(struct_name){T} <: FTailStat
-
-#     Calculation struct for the $(indicator) technical indicator.
-
-#     # Fields
-#     - `cb::CircBuff`: Circular buffer for storing input data
-#     $(join(["- `_$field::Float64`: Storage for $field calculation" for field in regular_fields], "\n"))
-#     $(join(["- `_$field::$(param_types[field])`: Parameter $field (default: $(default_values[field]))" for field in param_fields], "\n"))
-
-#     # Constructor
-#     ```julia
-#     $(struct_name){T}(period::Int$(isempty(param_fields) ? "" : ", " * join(["$field::$(param_types[field])=$(default_values[field])" for field in param_fields], ", ")))
-#     ```
-#     """
-
-#     # Add documentation for public function
-#     func_doc = """
-#         $(indicator)(ts::TSFrame, period::Int; field::Symbol=:Close$(isempty(param_fields) ? "" : ", " * join(["$field::$(param_types[field])=$(default_values[field])" for field in param_fields], ", ")))
-
-#     Calculate the $(indicator) technical indicator.
-
-#     # Arguments
-#     - `ts::TSFrame`: Input time series data
-#     - `period::Int`: Calculation period
-#     - `field::Symbol=:Close`: Column to use for calculation
-#     $(join(["- `$field::$(param_types[field])=$(default_values[field])`: $field parameter" for field in param_fields], "\n"))
-
-#     # Returns
-#     - `TSFrame`: Result of the calculation with column name `$(indicator)_period`
-#     """
-
-#     return quote
-#         # Define calculation struct with documentation
-#         @doc $struct_doc
-#         mutable struct $(esc(struct_name)){T} <: FTailStat
-#             cb::CircBuff
-#             $(field_expressions...)
-#             function $(esc(struct_name)){T}($(constructor_params...)) where {T}
-#                 new{T}(CircBuff{T}(period), $(init_expressions...))
-#             end
-#         end
-
-#         # Define internal calculation function
-#         @inline function $(esc(internal_func_name))(prices::Vector, period::Int; $([:($field::$(esc(param_types[field]))) for field in param_fields]...)=$([:($default_values[field]) for field in param_fields]...))
-#             ind = $(esc(struct_name)){eltype(prices)}(period, $(param_fields...))
-#             return map(x -> fit!(ind, x), prices)
-#         end
-
-#         # Define and export public interface function with documentation
-#         @doc $func_doc
-#         function $(esc(indicator))(ts::TSFrame, period::Int; field::Symbol=:Close, $([:($field::$(esc(param_types[field]))) for field in param_fields]...)=$([:($default_values[field]) for field in param_fields]...))
-#             prices = ts[:, field]
-#             results = $(esc(internal_func_name))(prices, period; $([:($field=$field) for field in param_fields]...))
-#             col_name = Symbol($func_name, :_, period)
-#             return TSFrame(results, index(ts), colnames = [col_name])
-#         end
-
-#         export $(esc(indicator))
-#     end
-# end
-
-
-
-
 
 """
 !!OBSOLETE!!

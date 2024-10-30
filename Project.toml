@@ -1,12 +1,14 @@
 name = "Foxtail"
 uuid = "cac871c8-24cd-45c7-943a-574f1c9f15e5"
 authors = ["Taka YMMT <dev@ymmt.cc>"]
-version = "0.1-DEV"
+version = "0.1.0-DEV"
 
 [deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 TSFrames = "9f90e835-9451-4aaa-bcb1-743a1b8d2f84"
 
 [compat]
+LinearAlgebra = "1.11.0"
 TSFrames = "0.2.2"
 julia = "1.11"
 
