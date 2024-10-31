@@ -719,3 +719,25 @@ function _JMA2(data::Vector{Float64}, length::Int=7, phase::Float64=0.0)
 
     return jma
 end
+
+@prep_SISO ZLEMA result alpha lag(0::Int)
+
+function fit!(ind::iZLEMA{T}, price::T) where T
+	if isfull(ind)
+		push!(ind, price)
+		EmaData = 2 * price - ind.cb[ind._lag]
+		ind._result = EmaData * ind._alpha + ind._result * (1 - ind._alpha)
+	else
+		push!(ind, price)
+		period = length(ind)
+		if period == 1
+			ind._result = price
+		else
+			ind._lag = - round(Int, (period-1) / 2)
+			ind._alpha = 2 / (1 + period)
+			EmaData = 2 * price - ind.cb[ind._lag]
+			ind._result = EmaData * ind._alpha + ind._result * (1 - ind._alpha)
+		end
+	end
+	return ind._result
+end
