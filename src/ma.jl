@@ -1,5 +1,5 @@
 """
-    _SMA(data::Vector{T}, period::Int) where T
+    SMA(data::Vector{T}, period::Int) where T
 
 Calculate Simple Moving Average (SMA) for a given time series data.
 
@@ -28,6 +28,7 @@ result = _SMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 3.0, 4.0]
 
 See also: [`@prep_MA`](@ref)
 """
+
 @prep_MA SMA
 
 function _SMA(data::Vector{T}, period::Int) where T
