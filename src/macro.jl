@@ -1,4 +1,147 @@
 """
+    @prep_MA(indicator, args...)
+
+Generate a type-safe technical indicator function for moving averages with optional parameters.
+
+# Arguments
+- `indicator`: Symbol for the indicator name (e.g., SMA, EMA, ALMA)
+- `args...`: Optional parameters in format: param_name(value), where value determines the type
+            (e.g., offset(0.85) creates a Float64 parameter)
+
+# Generated Function Format
+```julia
+indicator(ts::TSFrame, period::Int=10; field::Symbol=:Close, args...)
+```
+
+# Examples
+```julia
+# Basic moving average
+@prep_MA SMA
+# Generates: SMA(ts::TSFrame, period::Int=10; field::Symbol=:Close)
+
+# Moving average with parameters
+@prep_MA ALMA offset(0.85) sigma(6.0)
+# Generates: ALMA(ts::TSFrame, period::Int=10; field::Symbol=:Close, offset::Float64=0.85, sigma::Float64=6.0)
+```
+
+Note: The macro assumes existence of an internal calculation function named _indicator
+(e.g., _SMA, _ALMA) that implements the actual moving average computation.
+"""
+macro prep_MA(name, args...)
+    fname = string(name)
+
+    # Process arguments at the beginning
+    kw_args = Expr[]
+    call_args = Expr[]
+    param_docs = String[]
+    param_list = String[]
+
+    for arg in args
+        if arg isa Expr && arg.head == :call
+            param_name = arg.args[1]
+            param_value = arg.args[2]
+            param_type = typeof(param_value)
+
+            # For keyword arguments in function definition
+            push!(kw_args, Expr(:kw, Expr(:(::), esc(param_name), param_type), param_value))
+            # For function calls
+            push!(call_args, Expr(:kw, esc(param_name), esc(param_name)))
+            # For documentation
+            push!(param_docs, "- `$(param_name)::$(param_type)=$(param_value)`: Parameter for calculation")
+            push!(param_list, "$(param_name)::$(param_type)=$(param_value)")
+        end
+    end
+
+    # Generate documentation string
+    func_doc = """
+        $(fname)(ts::TSFrame, period::Int=10; field::Symbol=:Close$(isempty(param_list) ? "" : ", " * join(param_list, ", ")))
+
+    Calculate the $(fname) moving average.
+
+    # Arguments
+    - `ts::TSFrame`: Input time series data
+    - `period::Int=10`: Length of the moving average window
+    - `field::Symbol=:Close`: Column to use for calculation$(isempty(param_docs) ? "" : "\n\n# Optional Parameters\n" * join(param_docs, "\n"))
+
+    # Returns
+    - `TSFrame`: A new TSFrame containing the calculated moving average with column name `$(fname)_period`
+
+    # Examples
+    ```julia
+    # Basic usage
+    result = $(fname)(ts, 20)
+
+    # Using different price field
+    result = $(fname)(ts, 20; field=:Open)$(isempty(param_list) ? "" : "\n\n# With custom parameters\nresult = $(fname)(ts, 20; " * join(["$(arg.args[1])=$(arg.args[2])" for arg in args if arg isa Expr && arg.head == :call], ", ") * ")")
+    ```
+    """
+
+    if isempty(args)
+        quote
+            @doc $func_doc
+            function $(esc(name))(ts::TSFrame, period::Int=10; field::Symbol=:Close)
+                prices = ts[:, field]
+                results = $(esc(Symbol(:_, fname)))(prices, period)
+                col_name = Symbol($fname, :_, period)
+                return TSFrame(results, index(ts), colnames=[col_name])
+            end
+            export $(esc(name))
+        end
+    else
+        quote
+            @doc $func_doc
+            function $(esc(name))(ts::TSFrame, period::Int=10; field::Symbol=:Close, $(kw_args...))
+                prices = ts[:, field]
+                results = $(esc(Symbol(:_, fname)))(prices, period, $(call_args...))
+                col_name = Symbol($fname, :_, period)
+                return TSFrame(results, index(ts), colnames=[col_name])
+            end
+            export $(esc(name))
+        end
+    end
+end
+# macro prep_MA(name, args...)
+#     fname = string(name)
+
+#     if isempty(args)
+#         quote
+#             function $(esc(name))(ts::TSFrame, period::Int=10; field::Symbol=:Close)
+#                 prices = ts[:, field]
+#                 results = $(esc(Symbol(:_, fname)))(prices, period)
+#                 col_name = Symbol($fname, :_, period)
+#                 return TSFrame(results, index(ts), colnames=[col_name])
+#             end
+#             export $(esc(name))
+#         end
+#     else
+#         # Build keyword arguments and function calls
+#         kw_args = Expr[]
+#         call_args = Expr[]
+
+#         for arg in args
+#             if arg isa Expr && arg.head == :call
+#                 param_name = arg.args[1]
+#                 param_value = arg.args[2]
+#                 param_type = typeof(param_value)
+
+#                 push!(kw_args, Expr(:kw, Expr(:(::), esc(param_name), param_type), param_value))
+#                 push!(call_args, Expr(:kw, esc(param_name), esc(param_name)))
+#             end
+#         end
+
+#         quote
+#             function $(esc(name))(ts::TSFrame, period::Int=10; field::Symbol=:Close, $(kw_args...))
+#                 prices = ts[:, field]
+#                 results = $(esc(Symbol(:_, fname)))(prices, period, $(call_args...))
+#                 col_name = Symbol($fname, :_, period)
+#                 return TSFrame(results, index(ts), colnames=[col_name])
+#             end
+#             export $(esc(name))
+#         end
+#     end
+# end
+
+"""
     @prep_SISO(indicator, fields...)
 
 Generate a type-safe implementation of a Single Input, Single Output (SISO) technical indicator,

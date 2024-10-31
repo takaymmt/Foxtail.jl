@@ -29,6 +29,8 @@ ema = EMA(ts, 50)
     -   DEMA
     -   EMA
     -   HMA
+    -   JMA (Jurik MA)
+    -   KAMA (Kaufman's Adaptive MA)
     -   SMA
     -   SMMA (RMA)
     -   T3
