@@ -51,17 +51,16 @@ end
 
 
 # Exponential Moving Average
-@prep_SISO EMA result
+@prep_SISO EMA result alpha
 
 function fit!(ind::iEMA{T}, price::T) where T
 	if isfull(ind)
-		alpha = 2 / (1 + capacity(ind))
-		ind._result = price * alpha + ind._result * (1 - alpha)
 		push!(ind, price)
+		ind._result = price * ind._alpha + ind._result * (1 - ind._alpha)
 	else
 		push!(ind, price)
-		alpha = 2 / (1 + length(ind))
-		ind._result = price * alpha + ind._result * (1 - alpha)
+		ind._alpha = 2 / (1 + length(ind))
+		ind._result = price * ind._alpha + ind._result * (1 - ind._alpha)
 	end
 	return ind._result
 end
