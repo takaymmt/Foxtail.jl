@@ -1,3 +1,17 @@
+@prep_MA SMA
+@prep_MA EMA
+@prep_MA WMA
+@prep_MA SMMA
+# @prep_MA TMA
+# @prep_MA HMA
+# @prep_MA DEMA
+# @prep_MA TEMA
+# @prep_MA T3
+@prep_MA ALMA offset(0.85) sigma(6.0)
+@prep_MA KAMA fast(2) slow(30)
+@prep_MA JMA phase(0.0)
+@prep_MA ZLEMA
+
 """
     SMA(data::Vector{T}, period::Int) where T
 
@@ -21,23 +35,18 @@ The function maintains a running sum using a circular buffer to optimize perform
 
 # Example
 ```julia
-prices = [1.0, 2.0, 3.0, 4.0, 5.0]
-period = 3
-result = _SMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 3.0, 4.0]
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 4
+result = SMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]
 ```
-
-See also: [`@prep_MA`](@ref)
 """
-
-@prep_MA SMA
-
-function _SMA(data::Vector{T}, period::Int) where T
+@inline Base.@propagate_inbounds function _SMA(data::Vector{T}, period::Int) where T
     buf = CircBuff{T}(period)
     results = zeros(T, length(data))
     running_sum = zero(T)
 
     for (i, price) in enumerate(data)
-        if isfull(buf)
+        if i > period
             running_sum = running_sum - first(buf) + price
             results[i] = running_sum / period
             push!(buf, price)
@@ -50,65 +59,212 @@ function _SMA(data::Vector{T}, period::Int) where T
     return results
 end
 
+"""
+    EMA(data::Vector{T}, period::Int) where T
 
-# Exponential Moving Average
-@prep_SISO EMA result alpha
+Calculate Exponential Moving Average (EMA) for a given time series data.
 
-function fit!(ind::iEMA{T}, price::T) where T
-	if isfull(ind)
-		push!(ind, price)
-		ind._result = price * ind._alpha + ind._result * (1 - ind._alpha)
-	else
-		push!(ind, price)
-		ind._alpha = 2 / (1 + length(ind))
-		ind._result = price * ind._alpha + ind._result * (1 - ind._alpha)
-	end
-	return ind._result
+Exponential Moving Average applies more weight to recent prices while still considering
+historical data, with weights decreasing exponentially. This implementation uses a 
+dynamic smoothing factor for the initial period and a fixed smoothing factor afterwards.
+
+# Arguments
+- `data::Vector{T}`: Input price vector of any numeric type
+- `period::Int`: Length of the initialization period and smoothing factor calculation
+
+# Returns
+- `Vector{T}`: Vector containing EMA values for each point in the input data
+
+# Implementation Details
+The function uses different smoothing approaches based on the position in the series:
+- First point: Uses the actual price as initial EMA
+- During initialization (i ≤ period): Uses dynamic smoothing factor α = 2/(1+i)
+- After initialization (i > period): Uses fixed smoothing factor α = 2/(1+period)
+
+The EMA is calculated using the formula:
+    EMA_t = Price_t * α + EMA_(t-1) * (1-α)
+where α is the smoothing factor
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 4
+result = EMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 3.8, 4.68, 5.6, 6.57, 7.54, 8.52]
+```
+"""
+@inline Base.@propagate_inbounds function _EMA(data::Vector{T}, period::Int) where T
+    results = zeros(T, length(data))
+    alpha = 0.0
+
+    @inbounds for (i, price) in enumerate(data)
+        if i > period
+            results[i] = price * alpha + results[i-1] * (1-alpha)
+        elseif i == 1
+            results[i] = price
+        else
+            alpha = 2 / (1+i)
+            results[i] = price * alpha + results[i-1] * (1-alpha)
+        end
+    end
+    return results
 end
 
-# Weighted Moving Average
-@prep_SISO WMA numerator total denominator
+"""
+    WMA(data::Vector{T}, period::Int) where T
 
-function fit!(ind::iWMA{T}, price::T) where T
-	# See https://en.wikipedia.org/wiki/Moving_average#Weighted_moving_average
-	if isfull(ind)
-		losing = first(ind)
-		push!(ind, price)
-		n = length(ind)
+Calculate Weighted Moving Average (WMA) for a given time series data.
 
-		ind._numerator = ind._numerator + n * price - ind._total
-		ind._total = ind._total + price - losing
-	else
-		push!(ind, price)
-		n = length(ind)
-		ind._denominator = n * (n + 1) / 2
+Weighted Moving Average assigns linearly increasing weights to more recent prices
+while considering historical data. This implementation uses a circular buffer for
+efficient memory management and optimizes calculations by maintaining running sums.
 
-		ind._numerator += n * price
-		ind._total += price
-	end
+# Arguments
+- `data::Vector{T}`: Input price vector of any numeric type
+- `period::Int`: Length of the moving window for weighted average calculation
 
-	return ind._numerator / ind._denominator
+# Returns
+- `Vector{T}`: Vector containing WMA values for each point in the input data
+
+# Implementation Details
+The function uses different calculation approaches based on the buffer state:
+- During initialization (i ≤ period):
+  * Weight for position i is i
+  * Denominator is calculated as i(i+1)/2
+  * Maintains running sum of weighted prices
+- After initialization (i > period):
+  * Uses circular buffer to update running sums efficiently
+  * Updates numerator by adding new weighted price and removing oldest values
+  * Denominator remains constant at period(period+1)/2
+
+The WMA is calculated using the formula:
+    WMA = Σ(weight_i * price_i) / Σ(weight_i)
+where weight_i increases linearly with recency
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 4
+result = WMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+```
+"""
+@inline Base.@propagate_inbounds function _WMA(data::Vector{T}, period::Int) where T
+    # See https://en.wikipedia.org/wiki/Moving_average#Weighted_moving_average
+    buf = CircBuff{T}(period)
+    results = zeros(T, length(data))
+    numerator = 0.0
+    total = 0.0
+    denominator = 0.0
+
+    @inbounds for (i, price) in enumerate(data)
+        if i > period
+            numerator += period * price - total
+            total += price - first(buf)
+            push!(buf, price)
+        else
+            push!(buf, price)
+            denominator = i * (i+1) / 2
+            numerator += i * price
+            total += price
+        end
+        results[i] = numerator / denominator
+    end
+    return results
 end
 
-# Smoothed Moving Average / Running Moving Average
-@prep_SISO SMMA result
+"""
+    SMMA(data::Vector{T}, period::Int) where T
+    RMA(data::Vector{T}, period::Int) where T
 
-function fit!(ind::iSMMA{T}, price::T) where T
-	if isfull(ind)
-		alpha = 1 / capacity(ind)
-		ind._result = price * alpha + ind._result * (1 - alpha)
-		push!(ind, price)
-	else
-		push!(ind, price)
-		alpha = 1 / length(ind)
-		ind._result = price * alpha + ind._result * (1 - alpha)
-	end
-	return ind._result
+Calculate Smoothed Moving Average (SMMA) for a given time series data.
+Also known as RMA (Running Moving Average) or Modified Moving Average (MMA).
+
+Smoothed Moving Average is similar to EMA but uses a different smoothing approach,
+applying a gentler smoothing factor that gives more weight to historical data. This
+implementation uses a dynamic smoothing factor during initialization and a fixed
+smoothing factor afterwards.
+
+# Arguments
+- `data::Vector{T}`: Input price vector of any numeric type
+- `period::Int`: Length of the initialization period and smoothing factor calculation
+
+# Returns
+- `Vector{T}`: Vector containing SMMA values for each point in the input data
+
+# Implementation Details
+The function uses different smoothing approaches based on the position in the series:
+- First point: Uses the actual price as initial SMMA
+- During initialization (i ≤ period): Uses dynamic smoothing factor α = 1/i
+- After initialization (i > period): Uses fixed smoothing factor α = 1/period
+
+The SMMA is calculated using the formula:
+    SMMA_t = Price_t * α + SMMA_(t-1) * (1-α)
+where α is the smoothing factor
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 4
+result = SMMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.13, 3.84, 4.62, 5.47, 6.36, 7.27]
+```
+"""
+@inline Base.@propagate_inbounds function _SMMA(data::Vector{T}, period::Int) where T
+    results = zeros(T, length(data))
+    alpha = 0.0
+
+    @inbounds for (i, price) in enumerate(data)
+        if i > period
+            results[i] = price * alpha + results[i-1] * (1-alpha)
+        elseif i == 1
+            results[i] = price
+        else
+            alpha = 1 / i
+            results[i] = price * alpha + results[i-1] * (1-alpha)
+        end
+    end
+    return results
 end
-RMA(ts::TSFrame, period::Int; field::Symbol = :Close) = SMMA(ts, period; field)
+
+RMA(ts::TSFrame, period::Int; field::Symbol = :Close) = SMMA2(ts, period; field)
 export RMA
 
-# Triangular Moving Average
+"""
+    TMA(data::Vector{T}, period::Int) where T
+    TRIMA(data::Vector{T}, period::Int) where T
+
+Calculate Triangular Moving Average (TMA) for a given time series data.
+Also known as TRIMA (TRIangular Moving Average).
+
+Triangular Moving Average is a double-smoothed indicator calculated by taking a
+Simple Moving Average (SMA) of another SMA. This creates a smoother moving average
+with weights that increase linearly towards the middle of the period and then
+decrease linearly.
+
+# Arguments
+- `data::Vector{T}`: Input price vector of any numeric type
+- `period::Int`: Length of the moving window for average calculation
+
+# Returns
+- `Vector{T}`: Vector containing TMA values for each point in the input data
+
+# Implementation Details
+The function performs a two-step smoothing process:
+1. Calculates initial SMA with the specified period
+2. Takes another SMA of the result with period (n+1)/2, where n is the original period
+
+The weighting pattern follows a triangular distribution:
+- Weights increase linearly to the middle period
+- Weights decrease linearly from the middle to the end
+- Results in a smoother line compared to simple SMA
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 4
+result = TMA(prices, period)  # Returns: [1.0, 1.25, 1.75, 2.25, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+```
+
+See also: [`SMA`](@ref)
+"""
 function TMA(ts::TSFrame, period::Int; field::Symbol = :Close)
     prices = ts[:, field]
     SMA1 = _SMA(prices, period)
@@ -116,10 +272,49 @@ function TMA(ts::TSFrame, period::Int; field::Symbol = :Close)
     col_name = Symbol(:TMA, :_, period)
 	return TSFrame(results, index(ts), colnames = [col_name])
 end
+
 TRIMA(ts::TSFrame, period::Int; field::Symbol = :Close) = TMA(ts, period; field)
 export TMA, TRIMA
 
-# Hull Moving Average
+"""
+    HMA(data::Vector{T}, period::Int) where T
+
+Calculate Hull Moving Average (HMA) for a given time series data.
+
+Hull Moving Average, developed by Alan Hull, is designed to reduce lag in moving
+averages while maintaining smoothness. It combines multiple Weighted Moving Averages
+(WMA) with different periods and uses square root of the original period for final
+smoothing, resulting in a more responsive indicator.
+
+# Arguments
+- `data::Vector{T}`: Input price vector of any numeric type
+- `period::Int`: Length of the primary moving window for average calculation
+
+# Returns
+- `Vector{T}`: Vector containing HMA values for each point in the input data
+
+# Implementation Details
+The function performs a three-step calculation process:
+1. Calculates WMA with period/2
+2. Calculates WMA with full period
+3. Computes final HMA using the formula:
+   WMA[sqrt(period)]( 2 * WMA[period/2] - WMA[period] )
+
+Key characteristics:
+- Uses half-length WMA to capture faster price movements
+- Subtracts full-length WMA to reduce lag
+- Final smoothing period of sqrt(period) balances responsiveness and smoothness
+- Results in minimal lag while maintaining smooth transitions
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 4
+result = HMA(prices, period)  # Returns: [1.0, 1.44, 2.56, 3.89, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+```
+
+See also: [`WMA`](@ref)
+"""
 function HMA(ts::TSFrame, period::Int; field::Symbol = :Close)
 	prices = ts[:, field]
 	WMA1 = _WMA(prices, div(period, 2))
@@ -130,7 +325,45 @@ function HMA(ts::TSFrame, period::Int; field::Symbol = :Close)
 end
 export HMA
 
-# Double Exponential Moving Average
+"""
+    DEMA(data::Vector{T}, period::Int) where T
+
+Calculate Double Exponential Moving Average (DEMA) for a given time series data.
+
+Double Exponential Moving Average, developed by Patrick Mulloy, aims to reduce the
+inherent lag of traditional moving averages. It uses a combination of two EMAs to
+decrease the lag while maintaining smoothness, making it more responsive to price
+changes than a standard EMA.
+
+# Arguments
+- `data::Vector{T}`: Input price vector of any numeric type
+- `period::Int`: Length of the initialization period for EMA calculations
+
+# Returns
+- `Vector{T}`: Vector containing DEMA values for each point in the input data
+
+# Implementation Details
+The function performs a three-step calculation process:
+1. Calculates initial EMA with the specified period
+2. Calculates second EMA of the first EMA using the same period
+3. Computes final DEMA using the formula:
+   DEMA = 2 * EMA(price) - EMA(EMA(price))
+
+Key characteristics:
+- Double smoothing reduces noise while maintaining responsiveness
+- Multiplier of 2 and subtraction of double-smoothed EMA reduces lag
+- More responsive to price changes than standard EMA
+- Provides better trend following capabilities with less delay
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 4
+result = DEMA(prices, period)  # Returns: [1.0, 1.89, 2.78, 3.67, 4.68, 5.74, 6.80, 7.85, 8.90, 9.92]
+```
+
+See also: [`EMA`](@ref)
+"""
 function DEMA(ts::TSFrame, period::Int; field::Symbol = :Close)
 	prices = ts[:, field]
 	EMA1 = _EMA(prices, period)
@@ -141,7 +374,48 @@ function DEMA(ts::TSFrame, period::Int; field::Symbol = :Close)
 end
 export DEMA
 
-# Triple Exponential Moving Average
+"""
+    TEMA(data::Vector{T}, period::Int) where T
+
+Calculate Triple Exponential Moving Average (TEMA) for a given time series data.
+
+Triple Exponential Moving Average, also developed by Patrick Mulloy as an extension
+of DEMA, further reduces lag in trending markets while maintaining smoothness. It
+uses a combination of three EMAs to provide even more responsive signals than DEMA,
+while effectively filtering out price noise.
+
+# Arguments
+- `data::Vector{T}`: Input price vector of any numeric type
+- `period::Int`: Length of the initialization period for EMA calculations
+
+# Returns
+- `Vector{T}`: Vector containing TEMA values for each point in the input data
+
+# Implementation Details
+The function performs a four-step calculation process:
+1. Calculates initial EMA with the specified period
+2. Calculates second EMA of the first EMA using the same period
+3. Calculates third EMA of the second EMA using the same period
+4. Computes final TEMA using the formula:
+   TEMA = (EMA1 - EMA2) * 3 + EMA3
+   where EMA1 = EMA(price), EMA2 = EMA(EMA1), EMA3 = EMA(EMA2)
+
+Key characteristics:
+- Triple smoothing provides superior noise reduction
+- Combination formula helps eliminate lag while preserving trend signals
+- More responsive to price changes than both EMA and DEMA
+- Particularly effective in trending markets
+- Better handles short-term price fluctuations
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 4
+result = TEMA(prices, period)  # Returns highly responsive trend values
+```
+
+See also: [`EMA`](@ref), [`DEMA`](@ref)
+"""
 function TEMA(ts::TSFrame, period::Int; field::Symbol = :Close)
 	prices = ts[:, field]
 	EMA1 = _EMA(prices, period)
@@ -153,9 +427,59 @@ function TEMA(ts::TSFrame, period::Int; field::Symbol = :Close)
 end
 export TEMA
 
-# T3 Moving Average
-# T3(8, 0.1) is an alternative of EMA(20), a bit smoother
-# T3(13, 0.08) is an smoother alternative of EMA(40)
+"""
+    T3(data::Vector{T}, period::Int; a::Float64 = 0.7) where T
+
+Calculate T3 Moving Average for a given time series data.
+
+T3 Moving Average, developed by Tim Tillson, is a sophisticated moving average that
+uses multiple EMAs and a volume factor to create a highly smooth, low-lag indicator.
+It can be used as an alternative to traditional EMAs, offering better smoothness
+with comparable lag characteristics.
+
+# Arguments
+- `data::Vector{T}`: Input price vector of any numeric type
+- `period::Int`: Length of the initialization period for EMA calculations
+- `a::Float64`: Volume factor (default: 0.7) controlling smoothness and responsiveness
+
+# Returns
+- `Vector{T}`: Vector containing T3 values for each point in the input data
+
+# Implementation Details
+The function performs a two-phase calculation process:
+1. Calculates six successive EMAs with the specified period:
+   EMA1 = EMA(price)
+   EMA2 = EMA(EMA1)
+   ...up to EMA6
+
+2. Computes final T3 using the weighted combination formula:
+   T3 = c1*EMA6 + c2*EMA5 + c3*EMA4 + c4*EMA3
+   where coefficients are derived from volume factor a:
+   - c1 = -a³
+   - c2 = 3a² + 3a³
+   - c3 = -6a² - 3a - 3a³
+   - c4 = 1 + 3a + a³ + 3a²
+
+Common configurations:
+- T3(8, 0.1) provides a smoother alternative to EMA(20)
+- T3(13, 0.08) provides a smoother alternative to EMA(40)
+
+Key characteristics:
+- Multiple EMA smoothing provides superior noise reduction
+- Volume factor allows fine-tuning of smoothness vs. responsiveness
+- Minimal lag despite high degree of smoothing
+- More sophisticated than standard triple EMAs
+- Particularly effective in volatile markets
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 8
+result = T3(prices, period, a=0.1)  # Returns ultra-smooth trend values
+```
+
+See also: [`EMA`](@ref), [`TEMA`](@ref)
+"""
 function T3(ts::TSFrame, period::Int; field::Symbol = :Close, a::Float64 = 0.7)
 	prices = ts[:, field]
 
@@ -249,53 +573,7 @@ Short-term trading:  window=9,  offset=0.85, sigma=6
 Medium-term trading: window=21, offset=0.85, sigma=6
 Long-term trading:   window=50, offset=0.85, sigma=6
 """
-
-# mutable struct iALMA{T} <: FTailStat
-# 	cb::CircBuff
-# 	_bufwt::Vector
-# 	_offset::Float64
-# 	_sigma::Float64
-
-# 	function iALMA{T}(period::Int, offset::Float64=0.85, sigma::Float64=6.0) where {T}
-# 		new{T}(CircBuff{T}(period), zeros(T, period), offset, sigma)
-# 	end
-# end
-
-# # Define internal calculation function
-# @inline function _ALMA(prices::Vector, period::Int, offset::Float64=0.85, sigma::Float64=6.0)
-# 	ind = iALMA{eltype(prices)}(period, offset, sigma)
-# 	return map(x -> fit!(ind, x), prices)
-# end
-
-# function fit!(ind::iALMA{T}, price::T) where T
-# 	if isfull(ind)
-# 		push!(ind, price)
-# 		return dot(value(ind), ind._bufwt)
-
-# 	else
-# 		push!(ind, price)
-#         window = length(ind)
-
-# 		if window == 1
-# 			return price
-# 		else
-# 			m = ind._offset * (window - 1)
-# 			# m = floor(ind._offset * (window - 1))
-# 			s = window / ind._sigma
-# 			@inbounds for i in 0:(window-1)
-# 				ind._bufwt[i+1] = exp(-((i - m)^2) / (2 * s^2))
-# 			end
-# 			weights = view(ind._bufwt, 1:window)
-# 			weights ./= sum(weights)
-
-# 			return dot(value(ind), weights)
-# 		end
-# 	end
-# end
-
-@prep_MA ALMA offset(0.85) sigma(6.0)
-
-@inline function _ALMA(prices::Vector, period::Int; offset::Float64=0.85, sigma::Float64=6.0)
+@inline Base.@propagate_inbounds function _ALMA(prices::Vector, period::Int; offset::Float64=0.85, sigma::Float64=6.0)
 	n = length(prices)
 	result = Vector{Float64}(undef, n)
 	result[1] = copy(prices[1])
@@ -317,34 +595,6 @@ Long-term trading:   window=50, offset=0.85, sigma=6
 	end
 	return result
 end
-
-# # Define and export public interface function
-# function ALMA(ts::TSFrame, period::Int; field::Symbol=:Close, offset::Float64=0.85, sigma::Float64=6.0)
-# 	prices = ts[:, field]
-# 	results = _ALMA(prices, period, offset, sigma)
-# 	col_name = Symbol(:ALMA, :_, period)
-# 	return TSFrame(results, index(ts), colnames=[col_name])
-# end
-# export ALMA
-
-# # reference implementation of ALMA
-# function calculate_alma(data::Vector{Float64}, window::Int=9, offset::Float64=0.85, sigma::Float64=6.0)
-#     n = length(data)
-#     result = Vector{Float64}(undef, n)
-#     m = offset * (window - 1)
-#     # m = floor(offset * (window - 1))
-#     s = window / sigma
-#     weights = [exp(-((i - m)^2) / (2 * s^2)) for i in 0:(window-1)]
-#     weights ./= sum(weights)
-#     buffer = zeros(Float64, window)
-#     result[1:window-1] .= missing
-#     @inbounds for i in window:n
-#         buffer .= view(data, (i-window+1):i)
-#         result[i] = dot(buffer, weights)
-#     end
-#     return result
-# end
-# export calculate_alma
 
 
 """
@@ -403,18 +653,7 @@ kama_custom = KAMA(ts, 15, field=:Close, fast=3, slow=40)
 
 See also: [`_KAMA`](@ref) for the underlying implementation details.
 """
-# Define and export public interface function
-# function KAMA(ts::TSFrame, period::Int=10; field::Symbol=:Close, fast::Int=2, slow::Int=30)
-#     prices = ts[:, field]
-#     results = _KAMA(prices, period, fast, slow)
-#     col_name = Symbol(:KAMA, :_, period)
-#     return TSFrame(results, index(ts), colnames=[col_name])
-# end
-# export KAMA
-
-@prep_MA KAMA fast(2) slow(30)
-
-function _KAMA(data::AbstractVector{T}, n::Int=10; fast::Int=2, slow::Int=30) where T <: AbstractFloat
+@inline Base.@propagate_inbounds function _KAMA(data::AbstractVector{T}, n::Int=10; fast::Int=2, slow::Int=30) where T <: AbstractFloat
     length(data) < n && throw(ArgumentError("Input data length is shorter than the period"))
 
     # Pre-allocate memory (minimum required arrays)
@@ -519,16 +758,7 @@ Implementation Notes:
 References:
 Based on Mark Jurik's original algorithm description and research.
 """
-
-function JMA(ts::TSFrame, period::Int=10; field::Symbol=:Close, phase::Float64=0.0)
-    prices = ts[:, field]
-    results = _JMA(prices, period, phase)
-    col_name = Symbol(:JMA, :_, period)
-    return TSFrame(results, index(ts), colnames=[col_name])
-end
-export JMA
-
-function _JMA(data::Vector{Float64}, length::Int=7, phase::Float64=0.0)
+@inline Base.@propagate_inbounds function _JMA(data::Vector{Float64}, length::Int=7; phase::Float64=0.0)
     n = size(data, 1)
     jma = zeros(Float64, n)
 
@@ -561,7 +791,7 @@ function _JMA(data::Vector{Float64}, length::Int=7, phase::Float64=0.0)
     # First point initialization
     jma[1] = data[1]
 
-    for i in 2:n
+    @inbounds for i in 2:n
         # Calculate Jurik Bands
         del1 = data[i] - upper_band
         del2 = data[i] - lower_band
@@ -622,123 +852,79 @@ function _JMA(data::Vector{Float64}, length::Int=7, phase::Float64=0.0)
     return jma
 end
 
-
-
-function JMA2(ts::TSFrame, period::Int=10; field::Symbol=:Close, phase::Float64=0.0)
-    prices = ts[:, field]
-    results = _JMA2(prices, period, phase)
-    col_name = Symbol(:JMA2, :_, period)
-    return TSFrame(results, index(ts), colnames=[col_name])
-end
-export JMA2
 """
-    _JMA(data::Vector{Float64}, length::Int=7, phase::Float64=0.0)
+    ZLEMA(data::Vector{T}, period::Int) where T
 
-Optimized implementation of Jurik Moving Average (JMA).
-Almost 2 times faster than original implementation, but the result is slightly different.
+Calculate Zero-Lag Exponential Moving Average (ZLEMA) for a given time series data.
+
+Zero-Lag EMA, developed by John Ehlers, aims to eliminate the lag inherent in traditional
+moving averages by using a specially constructed price series. It combines the speed
+of shorter-term EMAs with the smoothness of longer-term ones by removing the lag
+associated with the averaging process.
+
+# Arguments
+- `data::Vector{T}`: Input price vector of any numeric type
+- `period::Int`: Length of the initialization period and smoothing factor calculation
+
+# Returns
+- `Vector{T}`: Vector containing ZLEMA values for each point in the input data
+
+# Implementation Details
+The function uses a circular buffer and performs calculations based on the position in the series:
+1. First point: Uses the actual price as initial ZLEMA
+2. During initialization (i ≤ period):
+   - Calculates lag as -(i-1)/2
+   - Uses dynamic smoothing factor α = 2/(1+i)
+   - Computes modified price series as: 2 * price - price[lag]
+3. After initialization (i > period):
+   - Uses fixed lag and smoothing factor
+   - Continues with the same modified price calculation
+
+The ZLEMA is calculated using two main components:
+1. Modified price series creation:
+   modified_price = 2 * current_price - price[lag]
+2. EMA calculation with the modified series:
+   ZLEMA_t = modified_price * α + ZLEMA_(t-1) * (1-α)
+where α is the smoothing factor
+
+Key characteristics:
+- Faster response to price changes than traditional EMAs
+- Reduced lag while maintaining smoothness
+- More effective in trending markets
+- Uses circular buffer for efficient memory management
+- Particularly useful for shorter-term trading signals
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+period = 4
+result = ZLEMA(prices, period)  # Returns: [1.0, 1.67, 2.83, 4.1, 5.26, 6.36, 7.41, 8.45, 9.47, 10.5]
+```
+
+See also: [`EMA`](@ref)
 """
-function _JMA2(data::Vector{Float64}, length::Int=7, phase::Float64=0.0)
-    n = size(data, 1)
-    jma = zeros(Float64, n)
+@inline Base.@propagate_inbounds function _ZLEMA(data::Vector{T}, period::Int=7) where T
+    buf = CircBuff{T}(period)
+    results = zeros(T, length(data))
+    lag = 0
+    alpha = 0.0
+    emadata = 0.0
 
-    # Pre-calculate constants
-    beta = 0.45 * (length - 1) / (0.45 * (length - 1) + 2)
-    len1 = max(0.0, log2(sqrt(length)) + 2)  # Using log2 is faster than log/log(2)
-    pow1 = max(0.5, len1 - 2)
-    phase_ratio = clamp(phase / 100 + 1.5, 0.5, 2.5)
-
-    # Pre-calculate frequently used constants
-    sqrt_pow1 = sqrt(pow1)
-    kv = beta ^ sqrt_pow1
-    one_minus_beta = 1.0 - beta
-    volty_bound = len1^(1/pow1)
-
-    # Ring buffer for volatility history
-    volty_history = zeros(Float64, 10)
-
-    # Initialize state variables
-    @inline function update_bands(price::Float64, del::Float64)::Float64
-        return ifelse(del > 0, price, price - kv * del)
+    @inbounds for (i, price) in enumerate(data)
+        push!(buf, price)
+        if i > period
+            emadata = 2 * price - buf[lag]
+            results[i] = emadata * alpha + results[i-1] * (1-alpha)
+        elseif i == 1
+            # push!(buf, price)
+            results[i] = price
+        else
+            # push!(buf, price)
+            lag = - round(Int, (i-1) / 2)
+            alpha = 2 / (1+i)
+            emadata = 2 * price - buf[lag]
+            results[i] = emadata * alpha + results[i-1] * (1-alpha)
+        end
     end
-
-    # Initialize first point
-    jma[1] = data[1]
-    ma1 = data[1]
-    det0 = 0.0
-    det1 = 0.0
-    upper_band = data[1]
-    lower_band = data[1]
-    v_sum = 0.0
-    volty_idx = 1
-
-    # Main loop with optimized calculations
-    @inbounds for i in 2:n
-        price = data[i]
-
-        # Jurik Bands calculation (reduced branches)
-        del1 = price - upper_band
-        del2 = price - lower_band
-        upper_band = update_bands(price, del1)
-        lower_band = update_bands(price, del2)
-
-        # Volatility calculation (removed equality check for speed)
-        volty = max(abs(del1), abs(del2))
-
-        # Efficient ring buffer update
-        old_volty = volty_history[volty_idx]
-        volty_history[volty_idx] = volty
-        volty_idx = mod1(volty_idx + 1, 10)
-
-        # Update volatility sum (reduced divisions)
-        v_sum = v_sum - old_volty * 0.1 + volty * 0.1
-
-        # Calculate average volatility
-        avg_volty = ifelse(i < 30, volty, v_sum)
-
-        # Calculate relative volatility (reduced branches)
-        r_volty = clamp(
-            ifelse(avg_volty > 0, volty / avg_volty, 1.0),
-            1.0,
-            volty_bound
-        )
-
-        # Calculate dynamic alpha (combined power calculations)
-        alpha = beta ^ (r_volty ^ pow1)
-        alpha_sq = alpha * alpha
-        one_minus_alpha = 1.0 - alpha
-        one_minus_alpha_sq = one_minus_alpha * one_minus_alpha
-
-        # Three-stage smoothing (combined multiplications)
-        ma1 = one_minus_alpha * price + alpha * ma1
-        det0 = (price - ma1) * one_minus_beta + beta * det0
-        ma2 = ma1 + phase_ratio * det0
-
-        prev_jma = jma[i-1]
-        det1 = (ma2 - prev_jma) * one_minus_alpha_sq + alpha_sq * det1
-        jma[i] = prev_jma + det1
-    end
-
-    return jma
-end
-
-@prep_SISO ZLEMA result alpha lag(0::Int)
-
-function fit!(ind::iZLEMA{T}, price::T) where T
-	if isfull(ind)
-		push!(ind, price)
-		EmaData = 2 * price - ind.cb[ind._lag]
-		ind._result = EmaData * ind._alpha + ind._result * (1 - ind._alpha)
-	else
-		push!(ind, price)
-		period = length(ind)
-		if period == 1
-			ind._result = price
-		else
-			ind._lag = - round(Int, (period-1) / 2)
-			ind._alpha = 2 / (1 + period)
-			EmaData = 2 * price - ind.cb[ind._lag]
-			ind._result = EmaData * ind._alpha + ind._result * (1 - ind._alpha)
-		end
-	end
-	return ind._result
+    return results
 end
