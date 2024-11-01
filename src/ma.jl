@@ -2,11 +2,11 @@
 @prep_MA EMA
 @prep_MA WMA
 @prep_MA SMMA
-# @prep_MA TMA
-# @prep_MA HMA
-# @prep_MA DEMA
-# @prep_MA TEMA
-# @prep_MA T3
+@prep_MA TMA
+@prep_MA HMA
+@prep_MA DEMA
+@prep_MA TEMA
+@prep_MA T3 a(0.7)
 @prep_MA ALMA offset(0.85) sigma(6.0)
 @prep_MA KAMA fast(2) slow(30)
 @prep_MA JMA phase(0.0)
@@ -45,7 +45,7 @@ result = SMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.5, 4.5, 5.5, 6.5
     results = zeros(T, length(data))
     running_sum = zero(T)
 
-    for (i, price) in enumerate(data)
+    @inbounds for (i, price) in enumerate(data)
         if i > period
             running_sum = running_sum - first(buf) + price
             results[i] = running_sum / period
@@ -65,7 +65,7 @@ end
 Calculate Exponential Moving Average (EMA) for a given time series data.
 
 Exponential Moving Average applies more weight to recent prices while still considering
-historical data, with weights decreasing exponentially. This implementation uses a 
+historical data, with weights decreasing exponentially. This implementation uses a
 dynamic smoothing factor for the initial period and a fixed smoothing factor afterwards.
 
 # Arguments
@@ -265,12 +265,9 @@ result = TMA(prices, period)  # Returns: [1.0, 1.25, 1.75, 2.25, 3.0, 4.0, 5.0, 
 
 See also: [`SMA`](@ref)
 """
-function TMA(ts::TSFrame, period::Int; field::Symbol = :Close)
-    prices = ts[:, field]
+@inline Base.@propagate_inbounds function _TMA(prices::Vector{T}, period::Int) where T
     SMA1 = _SMA(prices, period)
-    results = _SMA(SMA1, div(period+1, 2))
-    col_name = Symbol(:TMA, :_, period)
-	return TSFrame(results, index(ts), colnames = [col_name])
+    return _SMA(SMA1, div(period+1, 2))
 end
 
 TRIMA(ts::TSFrame, period::Int; field::Symbol = :Close) = TMA(ts, period; field)
@@ -315,15 +312,11 @@ result = HMA(prices, period)  # Returns: [1.0, 1.44, 2.56, 3.89, 5.0, 6.0, 7.0, 
 
 See also: [`WMA`](@ref)
 """
-function HMA(ts::TSFrame, period::Int; field::Symbol = :Close)
-	prices = ts[:, field]
-	WMA1 = _WMA(prices, div(period, 2))
+@inline Base.@propagate_inbounds function _HMA(prices::Vector{T}, period::Int) where T
+    WMA1 = _WMA(prices, div(period, 2))
 	WMA2 = _WMA(prices, period)
-	results = _WMA(WMA1 * 2 - WMA2, round(Int, sqrt(period)))
-	col_name = Symbol(:HMA, :_, period)
-	return TSFrame(results, index(ts), colnames = [col_name])
+	return _WMA(WMA1 * 2 - WMA2, round(Int, sqrt(period)))
 end
-export HMA
 
 """
     DEMA(data::Vector{T}, period::Int) where T
@@ -364,15 +357,11 @@ result = DEMA(prices, period)  # Returns: [1.0, 1.89, 2.78, 3.67, 4.68, 5.74, 6.
 
 See also: [`EMA`](@ref)
 """
-function DEMA(ts::TSFrame, period::Int; field::Symbol = :Close)
-	prices = ts[:, field]
-	EMA1 = _EMA(prices, period)
+@inline Base.@propagate_inbounds function _DEMA(prices::Vector{T}, period::Int) where T
+    EMA1 = _EMA(prices, period)
 	EMA2 = _EMA(EMA1, period)
-	results = EMA1 * 2 - EMA2
-	col_name = Symbol(:DEMA, :_, period)
-	return TSFrame(results, index(ts), colnames = [col_name])
+	return EMA1 * 2 - EMA2
 end
-export DEMA
 
 """
     TEMA(data::Vector{T}, period::Int) where T
@@ -416,16 +405,12 @@ result = TEMA(prices, period)  # Returns highly responsive trend values
 
 See also: [`EMA`](@ref), [`DEMA`](@ref)
 """
-function TEMA(ts::TSFrame, period::Int; field::Symbol = :Close)
-	prices = ts[:, field]
-	EMA1 = _EMA(prices, period)
+@inline Base.@propagate_inbounds function _TEMA(prices::Vector{T}, period::Int) where T
+    EMA1 = _EMA(prices, period)
 	EMA2 = _EMA(EMA1, period)
 	EMA3 = _EMA(EMA2, period)
-	results = (EMA1 - EMA2) * 3 + EMA3
-	col_name = Symbol(:TEMA, :_, period)
-	return TSFrame(results, index(ts), colnames = [col_name])
+	return (EMA1 - EMA2) * 3 + EMA3
 end
-export TEMA
 
 """
     T3(data::Vector{T}, period::Int; a::Float64 = 0.7) where T
@@ -480,10 +465,8 @@ result = T3(prices, period, a=0.1)  # Returns ultra-smooth trend values
 
 See also: [`EMA`](@ref), [`TEMA`](@ref)
 """
-function T3(ts::TSFrame, period::Int; field::Symbol = :Close, a::Float64 = 0.7)
-	prices = ts[:, field]
-
-	EMA1 = _EMA(prices, period)
+@inline Base.@propagate_inbounds function _T3(prices::Vector{T}, period::Int; a::Float64 = 0.7) where T
+    EMA1 = _EMA(prices, period)
 	EMA2 = _EMA(EMA1, period)
 	EMA3 = _EMA(EMA2, period)
 	EMA4 = _EMA(EMA3, period)
@@ -495,12 +478,8 @@ function T3(ts::TSFrame, period::Int; field::Symbol = :Close, a::Float64 = 0.7)
 	c3 = -6a^2 - 3a - 3a^3
 	c4 = 1 + 3a + a^3 + 3a^2
 
-	results = c1 * EMA6 + c2 * EMA5 + c3 * EMA4 + c4 * EMA3
-
-	col_name = Symbol(:T3, :_, period)
-	return TSFrame(results, index(ts), colnames = [col_name])
+	return c1 * EMA6 + c2 * EMA5 + c3 * EMA4 + c4 * EMA3
 end
-export T3
 
 """
 Arnaud Legoux Moving Average (ALMA) Implementation
