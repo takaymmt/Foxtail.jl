@@ -1,16 +1,16 @@
-@prep_MA SMA
-@prep_MA EMA
-@prep_MA WMA
-@prep_MA SMMA
-@prep_MA TMA
-@prep_MA HMA
-@prep_MA DEMA
-@prep_MA TEMA
-@prep_MA T3 a(0.7)
-@prep_MA ALMA offset(0.85) sigma(6.0)
-@prep_MA KAMA fast(2) slow(30)
-@prep_MA JMA phase(0.0)
-@prep_MA ZLEMA
+@prep_SISO SMA
+@prep_SISO EMA
+@prep_SISO WMA
+@prep_SISO SMMA
+@prep_SISO TMA
+@prep_SISO HMA
+@prep_SISO DEMA
+@prep_SISO TEMA
+@prep_SISO T3 (a=0.7)
+@prep_SISO ALMA (offset=0.85, sigma=6.0)
+@prep_SISO KAMA (fast=2, slow=30)
+@prep_SISO JMA (phase=0.0)
+@prep_SISO ZLEMA
 
 """
     SMA(data::Vector{T}, period::Int) where T
@@ -40,7 +40,7 @@ period = 4
 result = SMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]
 ```
 """
-@inline Base.@propagate_inbounds function _SMA(data::Vector{T}, period::Int) where T
+@inline Base.@propagate_inbounds function SMA(data::Vector{T}, period::Int) where T
     buf = CircBuff{T}(period)
     results = zeros(T, length(data))
     running_sum = zero(T)
@@ -92,7 +92,7 @@ period = 4
 result = EMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 3.8, 4.68, 5.6, 6.57, 7.54, 8.52]
 ```
 """
-@inline Base.@propagate_inbounds function _EMA(data::Vector{T}, period::Int) where T
+@inline Base.@propagate_inbounds function EMA(data::Vector{T}, period::Int) where T
     results = zeros(T, length(data))
     alpha = 0.0
 
@@ -147,7 +147,7 @@ period = 4
 result = WMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
 ```
 """
-@inline Base.@propagate_inbounds function _WMA(data::Vector{T}, period::Int) where T
+@inline Base.@propagate_inbounds function WMA(data::Vector{T}, period::Int) where T
     # See https://en.wikipedia.org/wiki/Moving_average#Weighted_moving_average
     buf = CircBuff{T}(period)
     results = zeros(T, length(data))
@@ -207,7 +207,7 @@ period = 4
 result = SMMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.13, 3.84, 4.62, 5.47, 6.36, 7.27]
 ```
 """
-@inline Base.@propagate_inbounds function _SMMA(data::Vector{T}, period::Int) where T
+@inline Base.@propagate_inbounds function SMMA(data::Vector{T}, period::Int) where T
     results = zeros(T, length(data))
     alpha = 0.0
 
@@ -224,7 +224,7 @@ result = SMMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.13, 3.84, 4.62,
     return results
 end
 
-RMA(ts::TSFrame, period::Int; field::Symbol = :Close) = SMMA2(ts, period; field)
+RMA(ts::TSFrame, period::Int; field::Symbol = :Close) = SMMA(ts, period; field)
 export RMA
 
 """
@@ -265,9 +265,9 @@ result = TMA(prices, period)  # Returns: [1.0, 1.25, 1.75, 2.25, 3.0, 4.0, 5.0, 
 
 See also: [`SMA`](@ref)
 """
-@inline Base.@propagate_inbounds function _TMA(prices::Vector{T}, period::Int) where T
-    SMA1 = _SMA(prices, period)
-    return _SMA(SMA1, div(period+1, 2))
+@inline Base.@propagate_inbounds function TMA(prices::Vector{T}, period::Int) where T
+    SMA1 = SMA(prices, period)
+    return SMA(SMA1, div(period+1, 2))
 end
 
 TRIMA(ts::TSFrame, period::Int; field::Symbol = :Close) = TMA(ts, period; field)
@@ -312,10 +312,10 @@ result = HMA(prices, period)  # Returns: [1.0, 1.44, 2.56, 3.89, 5.0, 6.0, 7.0, 
 
 See also: [`WMA`](@ref)
 """
-@inline Base.@propagate_inbounds function _HMA(prices::Vector{T}, period::Int) where T
-    WMA1 = _WMA(prices, div(period, 2))
-	WMA2 = _WMA(prices, period)
-	return _WMA(WMA1 * 2 - WMA2, round(Int, sqrt(period)))
+@inline Base.@propagate_inbounds function HMA(prices::Vector{T}, period::Int) where T
+    WMA1 = WMA(prices, div(period, 2))
+	WMA2 = WMA(prices, period)
+	return WMA(WMA1 * 2 - WMA2, round(Int, sqrt(period)))
 end
 
 """
@@ -357,9 +357,9 @@ result = DEMA(prices, period)  # Returns: [1.0, 1.89, 2.78, 3.67, 4.68, 5.74, 6.
 
 See also: [`EMA`](@ref)
 """
-@inline Base.@propagate_inbounds function _DEMA(prices::Vector{T}, period::Int) where T
-    EMA1 = _EMA(prices, period)
-	EMA2 = _EMA(EMA1, period)
+@inline Base.@propagate_inbounds function DEMA(prices::Vector{T}, period::Int) where T
+    EMA1 = EMA(prices, period)
+	EMA2 = EMA(EMA1, period)
 	return EMA1 * 2 - EMA2
 end
 
@@ -405,10 +405,10 @@ result = TEMA(prices, period)  # Returns highly responsive trend values
 
 See also: [`EMA`](@ref), [`DEMA`](@ref)
 """
-@inline Base.@propagate_inbounds function _TEMA(prices::Vector{T}, period::Int) where T
-    EMA1 = _EMA(prices, period)
-	EMA2 = _EMA(EMA1, period)
-	EMA3 = _EMA(EMA2, period)
+@inline Base.@propagate_inbounds function TEMA(prices::Vector{T}, period::Int) where T
+    EMA1 = EMA(prices, period)
+	EMA2 = EMA(EMA1, period)
+	EMA3 = EMA(EMA2, period)
 	return (EMA1 - EMA2) * 3 + EMA3
 end
 
@@ -465,13 +465,13 @@ result = T3(prices, period, a=0.1)  # Returns ultra-smooth trend values
 
 See also: [`EMA`](@ref), [`TEMA`](@ref)
 """
-@inline Base.@propagate_inbounds function _T3(prices::Vector{T}, period::Int; a::Float64 = 0.7) where T
-    EMA1 = _EMA(prices, period)
-	EMA2 = _EMA(EMA1, period)
-	EMA3 = _EMA(EMA2, period)
-	EMA4 = _EMA(EMA3, period)
-	EMA5 = _EMA(EMA4, period)
-	EMA6 = _EMA(EMA5, period)
+@inline Base.@propagate_inbounds function T3(prices::Vector{T}, period::Int; a::Float64 = 0.7) where T
+    EMA1 = EMA(prices, period)
+	EMA2 = EMA(EMA1, period)
+	EMA3 = EMA(EMA2, period)
+	EMA4 = EMA(EMA3, period)
+	EMA5 = EMA(EMA4, period)
+	EMA6 = EMA(EMA5, period)
 
 	c1 = -a^3
 	c2 = 3a^2 + 3a^3
@@ -552,7 +552,7 @@ Short-term trading:  window=9,  offset=0.85, sigma=6
 Medium-term trading: window=21, offset=0.85, sigma=6
 Long-term trading:   window=50, offset=0.85, sigma=6
 """
-@inline Base.@propagate_inbounds function _ALMA(prices::Vector, period::Int; offset::Float64=0.85, sigma::Float64=6.0)
+@inline Base.@propagate_inbounds function ALMA(prices::Vector, period::Int; offset::Float64=0.85, sigma::Float64=6.0)
 	n = length(prices)
 	result = Vector{Float64}(undef, n)
 	result[1] = copy(prices[1])
@@ -632,7 +632,7 @@ kama_custom = KAMA(ts, 15, field=:Close, fast=3, slow=40)
 
 See also: [`_KAMA`](@ref) for the underlying implementation details.
 """
-@inline Base.@propagate_inbounds function _KAMA(data::AbstractVector{T}, n::Int=10; fast::Int=2, slow::Int=30) where T <: AbstractFloat
+@inline Base.@propagate_inbounds function KAMA(data::AbstractVector{T}, n::Int=10; fast::Int=2, slow::Int=30) where T <: AbstractFloat
     length(data) < n && throw(ArgumentError("Input data length is shorter than the period"))
 
     # Pre-allocate memory (minimum required arrays)
@@ -737,7 +737,7 @@ Implementation Notes:
 References:
 Based on Mark Jurik's original algorithm description and research.
 """
-@inline Base.@propagate_inbounds function _JMA(data::Vector{Float64}, length::Int=7; phase::Float64=0.0)
+@inline Base.@propagate_inbounds function JMA(data::Vector{Float64}, length::Int=7; phase::Float64=0.0)
     n = size(data, 1)
     jma = zeros(Float64, n)
 
@@ -882,7 +882,7 @@ result = ZLEMA(prices, period)  # Returns: [1.0, 1.67, 2.83, 4.1, 5.26, 6.36, 7.
 
 See also: [`EMA`](@ref)
 """
-@inline Base.@propagate_inbounds function _ZLEMA(data::Vector{T}, period::Int=7) where T
+@inline Base.@propagate_inbounds function ZLEMA(data::Vector{T}, period::Int=7) where T
     buf = CircBuff{T}(period)
     results = zeros(T, length(data))
     lag = 0
