@@ -145,15 +145,8 @@ value(cb::CircBuff) = view(cb.buffer, _buf_idx(cb, 1:cb._length))
 
 include("macro.jl")
 include("ma.jl")
-include("indicators/ATR.jl")
 
-# for file in readdir("indicators", join=true)
-#     if endswith(file, ".jl")
-#         # include(file)
-# 		println(file)
-#     end
-# end
-
-export @prep_SISO
+readdir(joinpath(@__DIR__, "indicators"), join=true) |> 
+	f -> filter(x -> endswith(x, ".jl"), f) .|> include
 
 end
