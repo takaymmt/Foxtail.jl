@@ -95,7 +95,7 @@
 
     end
 
-    @testset "popfirst 1" begin
+    @testset "pushfirst! 1" begin
         cb = CircBuff{Int}(5)
         pushfirst!(cb, 1)
         @test value(cb) == [1]
@@ -103,7 +103,7 @@
         @test value(cb) == [2, 1]
     end
 
-    @testset "pushfirst 2" begin
+    @testset "pushfirst! 2" begin
         cb = CircBuff{Int}(5)  # New, empty one for full test coverage
         for i in -5:5
             pushfirst!(cb, i)
