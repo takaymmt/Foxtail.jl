@@ -2,7 +2,8 @@ using Foxtail
 using Test
 
 tests = [
-    "CircBuff"
+    "CircBuff",
+    "CircDeque"
 ]
 
 @testset "Foxtail.jl" begin

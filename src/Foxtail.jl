@@ -3,11 +3,12 @@ module Foxtail
 using TSFrames, LinearAlgebra
 
 export
-	CircBuff,
+	CircBuff, CircDeque,
 	# functions
 	isfull, capacity, value, merge_in!
 
 include("CircBuff.jl")
+include("CircDeque.jl")
 include("macro.jl")
 include("ma.jl")
 

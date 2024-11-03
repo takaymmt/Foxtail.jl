@@ -216,3 +216,5 @@
         @test value(cb) == [6,7,42,9,10]
     end
 end
+
+nothing
