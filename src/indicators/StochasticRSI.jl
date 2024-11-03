@@ -1,4 +1,4 @@
-function StochRSI(ts::TSFrame, period::Int=14; field::Vector{Symbol}=:Close, ma_type::Symbol=:SMA)
+function StochRSI(ts::TSFrame, period::Int=14; field::Symbol=:Close, ma_type::Symbol=:SMA)
     prices = ts[:,field]
     results = StochRSI(prices, period; ma_type=ma_type)
     colnames = [:Stoch_K, :Stoch_D]
@@ -35,9 +35,9 @@ end
         if !any(isnan, window)
             window_high = maximum(window)
             window_low = minimum(window)
-            
+
             denominator = window_high - window_low
-            
+
             if denominator ≈ 0.0
                 raw_k[i] = 50.0  # Default to middle value when RSI range is zero
             else
