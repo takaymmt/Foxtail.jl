@@ -184,22 +184,40 @@ value(cb::CircBuff) = view(cb.buffer, _buf_idx(cb, 1:cb._length))
 
 Push at most last `capacity` items.
 """
-@inline function Base.append!(cb::CircBuff, av::AbstractVector)
+@inline function Base.append!(cb::CircBuff{T}, av::AbstractVector{T}) where T
     n = length(av)
 	spc = cb.capacity - cb._length
 	if n > spc
-		for i in max(1, n-capacity(cb)+1):n
+		@inbounds for i in max(1, n-capacity(cb)+1):n
 			push!(cb, av[i])
 		end
 	else
-		for elm in av
+		@inbounds for elm in av
 			push!(cb, elm)
 		end
 	end
     return cb
 end
 
-@inline function Base.append!(cb::CircBuff, I::AbstractRange)
+@inline function Base.append!(cb::CircBuff{T1}, av::AbstractVector{T2}) where {T1,T2}
+    n = length(av)
+	spc = cb.capacity - cb._length
+	if n > spc
+        cnv = Vector{T1}(undef, cb.capacity)
+        start = n - cb.capacity
+		for i in 1:cb.capacity
+			cnv[i] = convert(T1, av[start + i])
+		end
+	else
+        cnv = Vector{T1}(undef, length(av))
+		for (i, elm) in enumerate(av)
+			cnv[i] = convert(T1, elm)
+		end
+	end
+    append!(cb, cnv)
+end
+
+@inline function Base.append!(cb::CircBuff{T}, I::AbstractRange{T}) where T
     n = length(I)
     spc = cb.capacity - cb._length
     if n > spc
@@ -214,22 +232,40 @@ end
     end
 end
 
+@inline function Base.append!(cb::CircBuff{T1}, rng::AbstractRange{T2}) where {T1,T2}
+    n = length(rng)
+    spc = cb.capacity - cb._length
+    if n > spc
+        cnv = Vector{T1}(undef, cb.capacity)
+        lst = last(rng, capacity(cb))
+        for (i,elm) in enumerate(lst)
+            cnv[i] = convert(T1, elm)
+        end
+	else
+        cnv = Vector{T1}(undef, n)
+		for (i, elm) in enumerate(rng)
+			cnv[i] = convert(T1, elm)
+		end
+	end
+    append!(cb, cnv)
+end
+
 """
     fill!(::CircBuff{T}, ::T)
 
 Fills all empty spaces in buffer, preserving existing elements
 """
 function Base.fill!(cb::CircBuff{T}, elm::T) where T
-	for i in 1:cb.capacity - cb._length
+	for _ in 1:(cb.capacity - cb._length)
 		push!(cb, elm)
 	end
 	return cb
 end
 
 function Base.fill!(cb::CircBuff{T1}, elm::T2) where {T1,T2}
-	nlm = convert(T1, elm)
-	for i in 1:cb.capacity - cb._length
-		push!(cb, nlm)
+	cnv = convert(T1, elm)
+	for _ in 1:(cb.capacity - cb._length)
+		push!(cb, cnv)
 	end
 	return cb
 end
@@ -240,23 +276,52 @@ end
 
 Appends vector to empty spaces until capacity is full, preserving existing elements
 """
-function merge_in!(cb::CircBuff, av::AbstractVector)
-	for i in 1:min(cb.capacity - cb._length, length(av))
-		push!(cb, av[i])
-	end
-	return cb
-end
-
-function merge_in!(cb::CircBuff, I::AbstractRange)
-    n = length(I)
+function merge_in!(cb::CircBuff{T}, av::AbstractVector{T}) where T
     spc = cb.capacity - cb._length
-    if n > spc
-        for i in first(I, spc)
-            push!(cb, i)
+    if spc > 0
+        @inbounds for i in 1:min(spc, length(av))
+            push!(cb, av[i])
         end
     else
-        for i in I
-            push!(cb, i)
+        return cb
+    end
+end
+
+function merge_in!(cb::CircBuff{T1}, av::AbstractVector{T2}) where {T1,T2}
+    spc = cb.capacity - cb._length
+    if spc > 0
+        cnv = Vector{T1}(undef, spc)
+        @inbounds for i in 1:min(spc, length(av))
+            cnv[i] = convert(T1, av[i])
         end
+        append!(cb, cnv)
+    else
+        return cb
+    end
+end
+
+function merge_in!(cb::CircBuff{T}, rng::AbstractRange{T}) where T
+    n = length(rng)
+    spc = cb.capacity - cb._length
+    if spc > 0
+        @inbounds for elm in first(rng, min(spc,n))
+            push!(cb, elm)
+        end
+    else
+        return cb
+    end
+end
+
+function merge_in!(cb::CircBuff{T1}, rng::AbstractRange{T2}) where {T1,T2}
+    spc = cb.capacity - cb._length
+    if spc > 0
+        n = length(rng)
+        cnv = Vector{T1}(undef, spc)
+        @inbounds for (i, elm) in enumerate(first(rng, min(spc,n)))
+            cnv[i] = convert(T1, elm)
+        end
+        append!(cb,cnv)
+    else
+        return cb
     end
 end

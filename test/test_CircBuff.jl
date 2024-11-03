@@ -194,26 +194,25 @@
     end
 
     @testset "Type converting check" begin
-        cb = CircBuff{Int}(6)
+        cb = CircBuff{Int}(5)
         @test_throws InexactError push!(cb, 1.5)
         @test_throws InexactError pushfirst!(cb, 1.5)
         @test_throws InexactError fill!(cb, 1.5)
         @test_throws InexactError append!(cb, [1.0, 1.5, 2.0])
-        @test length(cb) == 1
         @test_throws InexactError merge_in!(cb, [2.0, 2.5, 3.0])
+        @test length(cb) == 0
+        push!(cb, 1.0)
+        @test length(cb) == 1
+        pushfirst!(cb, 2.0)
         @test length(cb) == 2
-        push!(cb, 3.0)
-        @test length(cb) == 3
-        pushfirst!(cb, 4.0)
-        @test length(cb) == 4
-        fill!(cb, 5.0)
-        @test value(cb) == [4,1,2,3,5,5]
+        fill!(cb, 3.0)
+        @test value(cb) == [2,1,3,3,3]
         empty!(cb)
         merge_in!(cb, 4.0:10.0)
-        @test value(cb) == [4,5,6,7,8,9]
+        @test value(cb) == [4,5,6,7,8]
         append!(cb, 4.0:10.0)
-        @test value(cb) == [5,6,7,8,9,10]
+        @test value(cb) == [6,7,8,9,10]
         cb[3] = 42.0
-        @test value(cb) == [5,6,42,8,9,10]
+        @test value(cb) == [6,7,42,9,10]
     end
 end
