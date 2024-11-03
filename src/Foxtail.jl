@@ -7,8 +7,6 @@ export
 	# functions
 	isfull, capacity, value, merge_in!
 
-abstract type AbstractCircularBuffer{T} end
-
 include("CircBuff.jl")
 include("macro.jl")
 include("ma.jl")
