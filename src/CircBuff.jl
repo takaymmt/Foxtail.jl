@@ -7,7 +7,7 @@
 
 A circular buffer is a fixed-size, FIFO (First-In-First-Out) data structure that wraps around at its boundaries. It uses a single, fixed-size buffer as if it were connected end-to-end. When the buffer reaches its end, it begins again at its beginning, overwriting older data.
 """
-mutable struct CircBuff{T}
+mutable struct CircBuff{T} <: AbstractCircularBuffer{T}
 	const capacity::Int
 	buffer::Vector{T}
 	_begin::Int
@@ -75,61 +75,62 @@ function CircBuff{T1}(c::Int, I::AbstractRange{T2}) where {T1, T2}
 	CircBuff{T1}(c, buf)
 end
 
-function Base.show(io::IO, cb::CircBuff)
+function Base.show(io::IO, cb::AbstractCircularBuffer)
 	println(io, "Circular Buffer {$(typeof(cb))}")
 	println(io, ": max capacity = $(cb.capacity) | current length = $(cb._length) | begin = $(cb._begin)")
 	println(IOContext(io, :compact => true, :displaysize => (1, 70)), ": buffer = ", cb.buffer)
 end
 
-function Base.show(io::IO, ::MIME"text/plain", cb::CircBuff)
+function Base.show(io::IO, ::MIME"text/plain", cb::AbstractCircularBuffer)
 	show(io, cb)
 end
 
-@inline Base.@propagate_inbounds function _buf_idx(cb::CircBuff, i::Int)
+@inline Base.@propagate_inbounds function _buf_idx(cb::AbstractCircularBuffer, i::Int)
 	@boundscheck (cb._length == 0) && throw(BoundsError(cb, 1))
 	j = mod(i-1, cb._length) + 1
 	return mod(cb._begin + j - 2, cb.capacity) + 1
 end
 
-@inline Base.@propagate_inbounds function _buf_idx(cb::CircBuff, I::UnitRange{Int})
+@inline Base.@propagate_inbounds function _buf_idx(cb::AbstractCircularBuffer, I::UnitRange{Int})
 	return [_buf_idx(cb, i) for i in I]
 end
 
-Base.length(cb::CircBuff) = cb._length
-Base.size(cb::CircBuff) = size(cb.buffer)
-@inline Base.@propagate_inbounds Base.getindex(cb::CircBuff, i::Int) = cb.buffer[_buf_idx(cb, i)]
-@inline Base.@propagate_inbounds Base.getindex(cb::CircBuff, V::AbstractVector{Int}) = [cb[v] for v in V]
-@inline Base.@propagate_inbounds Base.getindex(cb::CircBuff, I::UnitRange{Int}) = [cb[i] for i in I]
-Base.firstindex(cb::CircBuff) = 1
-Base.lastindex(cb::CircBuff) = cb._length
-Base.isempty(cb::CircBuff) = cb._length == 0
-Base.eltype(cb::CircBuff) = eltype(cb.buffer)
+Base.length(cb::AbstractCircularBuffer) = cb._length
+Base.size(cb::AbstractCircularBuffer) = size(cb.buffer)
+@inline Base.@propagate_inbounds Base.getindex(cb::AbstractCircularBuffer, i::Int) = cb.buffer[_buf_idx(cb, i)]
+@inline Base.@propagate_inbounds Base.getindex(cb::AbstractCircularBuffer, V::AbstractVector{Int}) = [cb[v] for v in V]
+@inline Base.@propagate_inbounds Base.getindex(cb::AbstractCircularBuffer, I::UnitRange{Int}) = [cb[i] for i in I]
+Base.firstindex(cb::AbstractCircularBuffer) = 1
+Base.lastindex(cb::AbstractCircularBuffer) = cb._length
+Base.isempty(cb::AbstractCircularBuffer) = cb._length == 0
+Base.eltype(cb::AbstractCircularBuffer) = eltype(cb.buffer)
+Base.eltype(::Type{AbstractCircularBuffer{T}}) where T = T
 Base.eltype(::Type{CircBuff{T}}) where T = T
 
-@inline Base.@propagate_inbounds function Base.setindex!(cb::CircBuff{T}, n::T, i::Int) where T
+@inline Base.@propagate_inbounds function Base.setindex!(cb::AbstractCircularBuffer{T}, n::T, i::Int) where T
     cb.buffer[_buf_idx(cb, i)] = n
 end
 
-@inline Base.@propagate_inbounds function Base.setindex!(cb::CircBuff{T1}, n::T2, i::Int) where {T1, T2}
+@inline Base.@propagate_inbounds function Base.setindex!(cb::AbstractCircularBuffer{T1}, n::T2, i::Int) where {T1, T2}
     cb.buffer[_buf_idx(cb, i)] = convert(T1, n)
 end
 
-Base.@propagate_inbounds function Base.first(cb::CircBuff)
+Base.@propagate_inbounds function Base.first(cb::AbstractCircularBuffer)
 	@boundscheck (cb._length == 0) && throw(BoundsError(cb, 1))
 	return cb.buffer[cb._begin]
 end
 
-Base.@propagate_inbounds function Base.last(cb::CircBuff)
+Base.@propagate_inbounds function Base.last(cb::AbstractCircularBuffer)
 	@boundscheck (cb._length == 0) && throw(BoundsError(cb, 1))
 	return cb.buffer[_buf_idx(cb, cb._length)]
 end
 
-function Base.empty!(cb::CircBuff)
+function Base.empty!(cb::AbstractCircularBuffer)
 	cb._length = 0
 	return cb
 end
 
-@inline function Base.push!(cb::CircBuff{T}, n::T) where T
+@inline function Base.push!(cb::AbstractCircularBuffer{T}, n::T) where T
 	if cb._length == cb.capacity
 		cb._begin = (cb._begin == cb.capacity ? 1 : cb._begin + 1)
 	else
@@ -139,14 +140,14 @@ end
 	return cb
 end
 
-@inline function Base.push!(cb::CircBuff{T1}, n::T2) where {T1,T2}
+@inline function Base.push!(cb::AbstractCircularBuffer{T1}, n::T2) where {T1,T2}
 	push!(cb, convert(T1, n))
 end
 
-Base.push!(cb::CircBuff, av::AbstractVector) = append!(cb, av)
-Base.push!(cb::CircBuff, ar::AbstractRange) = append!(cb, ar)
+Base.push!(cb::AbstractCircularBuffer, av::AbstractVector) = append!(cb, av)
+Base.push!(cb::AbstractCircularBuffer, ar::AbstractRange) = append!(cb, ar)
 
-@inline function Base.pushfirst!(cb::CircBuff{T}, n::T) where T
+@inline function Base.pushfirst!(cb::AbstractCircularBuffer{T}, n::T) where T
 	cb._begin = cb._begin == 1 ? cb.capacity : cb._begin - 1
 	if cb._length < cb.capacity
 		cb._length += 1
@@ -155,18 +156,18 @@ Base.push!(cb::CircBuff, ar::AbstractRange) = append!(cb, ar)
 	return cb
 end
 
-function Base.pushfirst!(cb::CircBuff{T1}, n::T2) where {T1,T2}
+function Base.pushfirst!(cb::AbstractCircularBuffer{T1}, n::T2) where {T1,T2}
 	pushfirst!(cb, convert(T1, n))
 end
 
-@inline function Base.pop!(cb::CircBuff{T}) where T
+@inline function Base.pop!(cb::AbstractCircularBuffer{T}) where T
 	@boundscheck (cb._length == 0) && throw(ArgumentError("array must be non-empty"))
 	n = cb.buffer[_buf_idx(cb, cb._length)]
 	cb._length -= 1
 	return n
 end
 
-@inline function Base.popfirst!(cb::CircBuff{T}) where T
+@inline function Base.popfirst!(cb::AbstractCircularBuffer{T}) where T
 	@boundscheck (cb._length == 0) && throw(ArgumentError("array must be non-empty"))
 	n = cb.buffer[_buf_idx(cb, 1)]
 	cb._length -= 1
@@ -174,17 +175,17 @@ end
 	return n
 end
 
-isfull(cb::CircBuff) = cb._length == cb.capacity
-capacity(cb::CircBuff) = cb.capacity
-value(cb::CircBuff) = view(cb.buffer, _buf_idx(cb, 1:cb._length))
+isfull(cb::AbstractCircularBuffer) = cb._length == cb.capacity
+capacity(cb::AbstractCircularBuffer) = cb.capacity
+value(cb::AbstractCircularBuffer) = view(cb.buffer, _buf_idx(cb, 1:cb._length))
 
 """
-    append!(::CircBuff{T}, ::AbstractVector{T})
-    append!(::CircBuff,    ::AbstractRange)
+    append!(::AbstractCircularBuffer{T}, ::AbstractVector{T})
+    append!(::AbstractCircularBuffer,    ::AbstractRange)
 
 Push at most last `capacity` items.
 """
-@inline function Base.append!(cb::CircBuff{T}, av::AbstractVector{T}) where T
+@inline function Base.append!(cb::AbstractCircularBuffer{T}, av::AbstractVector{T}) where T
     n = length(av)
 	spc = cb.capacity - cb._length
 	if n > spc
@@ -199,7 +200,7 @@ Push at most last `capacity` items.
     return cb
 end
 
-@inline function Base.append!(cb::CircBuff{T1}, av::AbstractVector{T2}) where {T1,T2}
+@inline function Base.append!(cb::AbstractCircularBuffer{T1}, av::AbstractVector{T2}) where {T1,T2}
     n = length(av)
 	spc = cb.capacity - cb._length
 	if n > spc
@@ -217,7 +218,7 @@ end
     append!(cb, cnv)
 end
 
-@inline function Base.append!(cb::CircBuff{T}, I::AbstractRange{T}) where T
+@inline function Base.append!(cb::AbstractCircularBuffer{T}, I::AbstractRange{T}) where T
     n = length(I)
     spc = cb.capacity - cb._length
     if n > spc
@@ -232,7 +233,7 @@ end
     end
 end
 
-@inline function Base.append!(cb::CircBuff{T1}, rng::AbstractRange{T2}) where {T1,T2}
+@inline function Base.append!(cb::AbstractCircularBuffer{T1}, rng::AbstractRange{T2}) where {T1,T2}
     n = length(rng)
     spc = cb.capacity - cb._length
     if n > spc
@@ -251,18 +252,18 @@ end
 end
 
 """
-    fill!(::CircBuff{T}, ::T)
+    fill!(::AbstractCircularBuffer{T}, ::T)
 
 Fills all empty spaces in buffer, preserving existing elements
 """
-function Base.fill!(cb::CircBuff{T}, elm::T) where T
+function Base.fill!(cb::AbstractCircularBuffer{T}, elm::T) where T
 	for _ in 1:(cb.capacity - cb._length)
 		push!(cb, elm)
 	end
 	return cb
 end
 
-function Base.fill!(cb::CircBuff{T1}, elm::T2) where {T1,T2}
+function Base.fill!(cb::AbstractCircularBuffer{T1}, elm::T2) where {T1,T2}
 	cnv = convert(T1, elm)
 	for _ in 1:(cb.capacity - cb._length)
 		push!(cb, cnv)
@@ -271,12 +272,12 @@ function Base.fill!(cb::CircBuff{T1}, elm::T2) where {T1,T2}
 end
 
 """
-    merge_in!(::CircBuff{T}, ::AbstractVector)
-    merge_in!(::CircBuff{T}, ::AbstractRange)
+    merge_in!(::AbstractCircularBuffer{T}, ::AbstractVector)
+    merge_in!(::AbstractCircularBuffer{T}, ::AbstractRange)
 
 Appends vector to empty spaces until capacity is full, preserving existing elements
 """
-function merge_in!(cb::CircBuff{T}, av::AbstractVector{T}) where T
+function merge_in!(cb::AbstractCircularBuffer{T}, av::AbstractVector{T}) where T
     spc = cb.capacity - cb._length
     if spc > 0
         @inbounds for i in 1:min(spc, length(av))
@@ -287,7 +288,7 @@ function merge_in!(cb::CircBuff{T}, av::AbstractVector{T}) where T
     end
 end
 
-function merge_in!(cb::CircBuff{T1}, av::AbstractVector{T2}) where {T1,T2}
+function merge_in!(cb::AbstractCircularBuffer{T1}, av::AbstractVector{T2}) where {T1,T2}
     spc = cb.capacity - cb._length
     if spc > 0
         cnv = Vector{T1}(undef, spc)
@@ -300,7 +301,7 @@ function merge_in!(cb::CircBuff{T1}, av::AbstractVector{T2}) where {T1,T2}
     end
 end
 
-function merge_in!(cb::CircBuff{T}, rng::AbstractRange{T}) where T
+function merge_in!(cb::AbstractCircularBuffer{T}, rng::AbstractRange{T}) where T
     n = length(rng)
     spc = cb.capacity - cb._length
     if spc > 0
@@ -312,7 +313,7 @@ function merge_in!(cb::CircBuff{T}, rng::AbstractRange{T}) where T
     end
 end
 
-function merge_in!(cb::CircBuff{T1}, rng::AbstractRange{T2}) where {T1,T2}
+function merge_in!(cb::AbstractCircularBuffer{T1}, rng::AbstractRange{T2}) where {T1,T2}
     spc = cb.capacity - cb._length
     if spc > 0
         n = length(rng)
