@@ -2,7 +2,7 @@
 
 > **Fi**nancial **O**bservation and e**X**ploration **T**echnical **A**nalysis **I**ndicators **L**ibrary
 
-Foxtail is a high-performance library for technical analysis indicators. It achieves exceptional speed by implementing incremental calculations for each indicator. Currently, the time series data input/output is dependent on TSFrames.
+Foxtail is a high-performance library for technical analysis indicators using the online algorithm. Currently, the time series data input/output is dependent on TSFrames.
 
 ## Prerequisites
 
@@ -24,6 +24,10 @@ ema = EMA(ts, 50)
 
 ## Support Indicators
 
+-   Bollinger Bands
+-   RSI
+-   Stochastic
+-   StochasticRSI
 -   Moving Average
     -   ALMA
     -   DEMA

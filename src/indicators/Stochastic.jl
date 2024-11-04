@@ -1,13 +1,12 @@
 function Stoch(ts::TSFrame, period::Int = 14; field::Vector{Symbol} = [:High, :Low, :Close], ma_type::Symbol = :SMA)
 	prices = ts[:, field] |> Matrix
-	results = Stoch(prices; period = period, ma_type = ma_type)
+	results = Stoch(prices, period; ma_type = ma_type)
 	colnames = [:Stoch_K, :Stoch_D]
 	return TSFrame(results, index(ts), colnames = colnames)
 end
 export Stoch
 
-function Stoch(prices::Matrix{Float64};
-	period::Int = 14,
+@inline Base.@propagate_inbounds function Stoch(prices::Matrix{Float64}, period::Int = 14;
 	k_smooth::Int = 3,
 	d_smooth::Int = 3,
 	ma_type::Symbol = :SMA)

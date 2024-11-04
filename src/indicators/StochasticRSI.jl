@@ -1,7 +1,7 @@
 function StochRSI(ts::TSFrame, period::Int=14; field::Symbol=:Close, ma_type::Symbol=:SMA)
     prices = ts[:,field]
     results = StochRSI(prices, period; ma_type=ma_type)
-    colnames = [:Stoch_K, :Stoch_D]
+    colnames = [:StochRSI_K, :StochRSI_D]
     return TSFrame(results, index(ts), colnames=colnames)
 end
 
