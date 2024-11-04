@@ -5,7 +5,8 @@ function StochRSI(ts::TSFrame, period::Int=14; field::Symbol=:Close, ma_type::Sy
     return TSFrame(results, index(ts), colnames=colnames)
 end
 
-@inline Base.@propagate_inbounds function StochRSI(prices::Vector{Float64}, period::Int=14; k_smooth::Int=3, d_smooth::Int=3, ma_type::Symbol=:SMA)
+@inline Base.@propagate_inbounds function StochRSI(prices::Vector{Float64}, period::Int=14;
+    k_smooth::Int=3, d_smooth::Int=3, ma_type::Symbol=:SMA)
 
     if period < 1 || k_smooth < 1 || d_smooth < 1
         throw(ArgumentError("periods must be positive"))
@@ -17,34 +18,49 @@ end
     end
 
     # Calculate RSI first
-    rsi_values = RSI(prices, period; smoothing=ma_type)
+    rsi = RSI(prices, period; smoothing=ma_type)
 
-    # Pre-allocate arrays
-    # raw_k = fill(NaN, n)
-    # stoch_k = fill(NaN, n)
-    # stoch_d = fill(NaN, n)
     raw_k = zeros(n)
     stoch_k = zeros(n)
     stoch_d = zeros(n)
 
-    # Calculate Raw Stochastic %K based on RSI values
-    # Start after the RSI values become valid (period + 1)
-    @inbounds for i in (period+period):n
-        # Check if we have valid RSI values in the window
-        window = @view rsi_values[i-period+1:i]
-        if !any(isnan, window)
-            window_high = maximum(window)
-            window_low = minimum(window)
+    max_q = MonotoneQueue{Float64}(period+1)
+	min_q = MonotoneQueue{Float64}(period+1)
 
-            denominator = window_high - window_low
+    @inbounds for i in 1:period
+		push_back!(max_q, rsi[i], i)
+		push_back_min!(min_q, rsi[i], i)
 
-            if denominator ≈ 0.0
-                raw_k[i] = 50.0  # Default to middle value when RSI range is zero
-            else
-                raw_k[i] = 100.0 * (rsi_values[i] - window_low) / denominator
-            end
-        end
-    end
+		w_max = get_extreme(max_q)
+		w_min = get_extreme(min_q)
+
+		denominator = w_max - w_min
+
+		if denominator ≈ 0.0
+			raw_k[i] = 50.0  # Default to middle value when price range is zero
+		else
+			raw_k[i] = 100.0 * (rsi[i] - w_min) / denominator
+		end
+	end
+
+    @inbounds for i in (period+1):n
+		remove_old!(max_q, i - period)
+		remove_old!(min_q, i - period)
+
+		push_back!(max_q, rsi[i], i)
+		push_back_min!(min_q, rsi[i], i)
+
+		w_max = get_extreme(max_q)
+		w_min = get_extreme(min_q)
+
+		denominator = w_max - w_min
+
+		if denominator ≈ 0.0
+			raw_k[i] = 50.0  # Default to middle value when price range is zero
+		else
+			raw_k[i] = 100.0 * (rsi[i] - w_min) / denominator
+		end
+	end
 
     # Apply smoothing to get Stochastic %K
     if ma_type == :SMA
@@ -66,13 +82,6 @@ end
         stoch_d = SMMA(stoch_k, d_smooth)
     end
 
-    # # Handle initial NaN values
-    # @inbounds for i in 1:(period*2-1)  # Account for both RSI and Stochastic periods
-    #     stoch_k[i] = NaN
-    #     stoch_d[i] = NaN
-    # end
-
-    # Return matrix with K and D values
     return hcat(stoch_k, stoch_d)
 end
 

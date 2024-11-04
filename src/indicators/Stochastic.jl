@@ -7,9 +7,7 @@ end
 export Stoch
 
 @inline Base.@propagate_inbounds function Stoch(prices::Matrix{Float64}, period::Int = 14;
-	k_smooth::Int = 3,
-	d_smooth::Int = 3,
-	ma_type::Symbol = :SMA)
+	k_smooth::Int = 3, d_smooth::Int = 3, ma_type::Symbol = :SMA)
 
 	if size(prices, 2) != 3
 		throw(ArgumentError("prices matrix must have 3 columns [high low close]"))
@@ -41,10 +39,10 @@ export Stoch
 		push_back!(max_q, highs[i], i)
 		push_back_min!(min_q, lows[i], i)
 
-    w_max = get_extreme(max_q)
-    w_min = get_extreme(min_q)
+		w_max = get_extreme(max_q)
+		w_min = get_extreme(min_q)
 
-    denominator = w_max - w_min
+		denominator = w_max - w_min
 
 		if denominator ≈ 0.0
 			raw_k[i] = 50.0  # Default to middle value when price range is zero
@@ -61,9 +59,9 @@ export Stoch
 		push_back_min!(min_q, lows[i], i)
 
 		w_max = get_extreme(max_q)
-    w_min = get_extreme(min_q)
+		w_min = get_extreme(min_q)
 
-    denominator = w_max - w_min
+		denominator = w_max - w_min
 
 		if denominator ≈ 0.0
 			raw_k[i] = 50.0  # Default to middle value when price range is zero
