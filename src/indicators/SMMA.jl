@@ -38,15 +38,18 @@ result = SMMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.13, 3.84, 4.62,
     results = zeros(T, length(data))
     alpha = 0.0
 
-    @inbounds for (i, price) in enumerate(data)
-        if i > period
-            results[i] = price * alpha + results[i-1] * (1-alpha)
-        elseif i == 1
-            results[i] = price
-        else
-            alpha = 1 / i
-            results[i] = price * alpha + results[i-1] * (1-alpha)
-        end
+    @inbounds results[1] = data[1]
+    
+    # Calculate alpha for period > 1
+    @inbounds for i in 2:period
+        alpha = 1/ i
+        results[i] = data[i] * alpha + results[i-1] * (1 - alpha)
+    end
+    
+    # Fixed alpha for remaining values
+    alpha = 1 / period
+    @inbounds for i in (period+1):length(data)
+        results[i] = data[i] * alpha + results[i-1] * (1 - alpha)
     end
     return results
 end
@@ -55,3 +58,45 @@ end
 
 RMA(ts::TSFrame, period::Int; field::Symbol = :Close) = SMMA(ts, period; field)
 export RMA
+
+@inline Base.@propagate_inbounds function SMMA_stats(data::Vector{T}, period::Int=10) where T
+    results = zeros(T, length(data), 2)
+    α = 0.0
+    
+    # Initialize with first value
+    @inbounds results[1, 1] = data[1]  # mean
+    @inbounds results[1, 2] = zero(T)  # std
+    
+    # Previous values for recursive calculation
+    prev_mean = data[1]
+    prev_variance = zero(T)
+    
+    @inbounds for i in 2:length(data)
+        # Set appropriate alpha based on position
+        if i > period
+            α = 1 / period
+        else
+            α = 1 / i
+        end
+        
+        # Calculate difference from previous mean
+        diff = data[i] - prev_mean
+        
+        # Update mean
+        incr = α * diff
+        new_mean = prev_mean + incr
+        
+        # Update variance using the recursive formula
+        new_variance = (1 - α) * (prev_variance + diff * incr)
+        
+        # Store results
+        results[i, 1] = new_mean
+        results[i, 2] = sqrt(max(zero(T), new_variance))
+        
+        # Update previous values for next iteration
+        prev_mean = new_mean
+        prev_variance = new_variance
+    end
+    
+    return results
+end

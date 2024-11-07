@@ -31,16 +31,20 @@ result = SMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.5, 4.5, 5.5, 6.5
     results = zeros(T, length(data))
     running_sum = zero(T)
 
-    @inbounds for (i, price) in enumerate(data)
-        if i > period
-            running_sum = running_sum - first(buf) + price
-            results[i] = running_sum / period
-            push!(buf, price)
-        else
-            push!(buf, price)
-            running_sum += price
-            results[i] = running_sum / length(buf)
-        end
+    # Initialize first period elements
+    @inbounds for i in 1:min(period, length(data))
+        price = data[i]
+        push!(buf, price)
+        running_sum += price
+        results[i] = running_sum / i
+    end
+
+    # Process remaining elements
+    @inbounds for i in (period+1):length(data)
+        price = data[i]
+        running_sum = running_sum - first(buf) + price
+        results[i] = running_sum / period
+        push!(buf, price)
     end
     return results
 end
