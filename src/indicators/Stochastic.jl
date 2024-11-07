@@ -1,11 +1,23 @@
-function Stoch(ts::TSFrame, period::Int = 14; field::Vector{Symbol} = [:High, :Low, :Close], ma_type::Symbol = :SMA)
-	prices = ts[:, field] |> Matrix
-	results = Stoch(prices, period; ma_type = ma_type)
-	colnames = [:Stoch_K, :Stoch_D]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-export Stoch
+"""
+    Stoch(prices::Matrix{Float64}, period::Int = 14;
+        k_smooth::Int = 3, d_smooth::Int = 3, ma_type::Symbol = :SMA)
 
+Stochastic Oscillator, a momentum indicator comparing a closing priceto its price range over a specific period.
+
+# Calculation
+- %K = (Current Close - Lowest Low) / (Highest High - Lowest Low) × 100
+- %D = n-period moving average of %K
+
+# Parameters
+- `prices`: Price matrix with columns [high, low, close]
+- `period`: Lookback period for calculating %K (default: 14)
+- `k_smooth`: Smoothing period for %K (default: 3)
+- `d_smooth`: Smoothing period for %D (default: 3)
+- `ma_type`: Moving average type for smoothing (:SMA, :EMA, etc.)
+
+# Returns
+Matrix containing [%K, %D]
+"""
 @inline Base.@propagate_inbounds function Stoch(prices::Matrix{Float64}, period::Int = 14;
 	k_smooth::Int = 3, d_smooth::Int = 3, ma_type::Symbol = :SMA)
 
@@ -92,3 +104,11 @@ export Stoch
 
 	return hcat(slow_k, slow_d)
 end
+
+function Stoch(ts::TSFrame, period::Int = 14; field::Vector{Symbol} = [:High, :Low, :Close], ma_type::Symbol = :SMA)
+	prices = ts[:, field] |> Matrix
+	results = Stoch(prices, period; ma_type = ma_type)
+	colnames = [:Stoch_K, :Stoch_D]
+	return TSFrame(results, index(ts), colnames = colnames)
+end
+export Stoch

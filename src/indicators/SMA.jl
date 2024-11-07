@@ -46,3 +46,33 @@ result = SMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.5, 4.5, 5.5, 6.5
 end
 
 @prep_SISO SMA
+
+@inline Base.@propagate_inbounds function SMA_stats(prices::Vector{T}, period::Int) where T
+    buf = CircBuff{T}(period)
+    results = zeros(T, (length(prices), 2))  # Column 1: SMA, Column 2: STD
+    running_sum = zero(T)
+    running_sum_x2 = zero(T)
+
+    @inbounds for (i, price) in enumerate(prices)
+        if i > period
+            out = first(buf)
+            running_sum = running_sum - out + price
+            running_sum_x2 = running_sum_x2 - out^2 + price^2
+            mean = running_sum / period
+            variance = running_sum_x2 / period - mean^2
+            results[i,1] = mean
+            results[i,2] = sqrt(max(zero(T), variance))
+            push!(buf, price)
+        else
+            push!(buf, price)
+            running_sum += price
+            running_sum_x2 += price^2
+            mean = running_sum / i
+            variance = running_sum_x2 / i - mean^2
+            results[i,1] = mean
+            results[i,2] = sqrt(max(zero(T), variance))
+        end
+    end
+    return results
+end
+# export SMA_stats
