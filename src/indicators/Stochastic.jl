@@ -44,15 +44,13 @@ Matrix containing [%K, %D]
 	slow_k = zeros(n)
 	slow_d = zeros(n)
 
-	max_q = MonotoneQueue{Float64}(period+1)
-	min_q = MonotoneQueue{Float64}(period+1)
+	q = MinimaxQueue{Float64}(period+1)
 
 	@inbounds for i in 1:period
-		push_back!(max_q, highs[i], i)
-		push_back_min!(min_q, lows[i], i)
+		update!(q, highs[i], lows[i], i)
 
-		w_max = get_extreme(max_q)
-		w_min = get_extreme(min_q)
+		w_max = get_max(q)
+		w_min = get_min(q)
 
 		denominator = w_max - w_min
 
@@ -64,14 +62,11 @@ Matrix containing [%K, %D]
 	end
 
 	@inbounds for i in (period+1):n
-		remove_old!(max_q, i - period)
-		remove_old!(min_q, i - period)
+		remove_old!(q, i - period)
+		update!(q, highs[i], lows[i], i)
 
-		push_back!(max_q, highs[i], i)
-		push_back_min!(min_q, lows[i], i)
-
-		w_max = get_extreme(max_q)
-		w_min = get_extreme(min_q)
+		w_max = get_max(q)
+		w_min = get_min(q)
 
 		denominator = w_max - w_min
 

@@ -56,21 +56,23 @@ See also: [`EMA`](@ref)
     alpha = 0.0
     emadata = 0.0
 
-    @inbounds for (i, price) in enumerate(data)
+    @inbounds results[1] = data[1]
+    push!(buf, data[1])
+
+    @inbounds for i in 2:period
+        price = data[i]
         push!(buf, price)
-        if i > period
-            emadata = 2 * price - buf[lag]
-            results[i] = emadata * alpha + results[i-1] * (1-alpha)
-        elseif i == 1
-            # push!(buf, price)
-            results[i] = price
-        else
-            # push!(buf, price)
-            lag = - round(Int, (i-1) / 2)
-            alpha = 2 / (1+i)
-            emadata = 2 * price - buf[lag]
-            results[i] = emadata * alpha + results[i-1] * (1-alpha)
-        end
+        lag = -round(Int, (i-1) / 2)
+        alpha = 2 / (1+i)
+        emadata = 2 * price - buf[lag]
+        results[i] = emadata * alpha + results[i-1] * (1-alpha)
+    end
+
+    @inbounds for i in (period+1):length(data)
+        price = data[i]
+        push!(buf, price)
+        emadata = 2 * price - buf[lag]
+        results[i] = emadata * alpha + results[i-1] * (1-alpha)
     end
     return results
 end

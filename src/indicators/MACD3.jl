@@ -1,7 +1,7 @@
 function MACD3(ts::TSFrame; field::Symbol = :Close, fast::Int = 5, middle::Int = 20, slow::Int = 40, ma_type::Symbol = :EMA)
 	prices = ts[:, field]
 	results = MACD3(prices, fast, middle, slow, ma_type)
-	colnames = [:MACD_Fast, :MACD_Middle, :MACD_Slow]
+	colnames = [:MACD3_Fast, :MACD3_Middle, :MACD3_Slow]
 	return TSFrame(results, index(ts), colnames = colnames)
 end
 export MACD3

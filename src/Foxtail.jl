@@ -9,7 +9,7 @@ export
 
 include("tools/CircBuff.jl")
 include("tools/CircDeque.jl")
-include("tools/MonotoneQueue.jl")
+include("tools/MinMaxQueue.jl")
 include("macro.jl")
 
 readdir(joinpath(@__DIR__, "indicators"), join=true) |>

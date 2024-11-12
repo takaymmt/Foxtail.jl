@@ -88,3 +88,67 @@ macro prep_SISO(name, args...)
         end
     end
 end
+
+"""
+# SIMO ------------------------------------------------------------------------
+
+function BB(ts::TSFrame, period::Int = 14; field::Symbol = :Close, num_std = 2, ma_type::Symbol = :SMA)
+	prices = ts[:, field]
+    results = BB(prices, period; num_std = num_std, ma_type = ma_type)
+	colnames = [:BB_Center, :BB_Upper, :BB_Lower]
+	return TSFrame(results, index(ts), colnames = colnames)
+end
+
+function MACD(ts::TSFrame; field::Symbol = :Close, fast::Int = 12, slow::Int = 26, signal::Int = 9)
+	prices = ts[:, field]
+	results = MACD(prices, fast, slow, signal)
+	colnames = [:MACD_Line, :MACD_Signal, :MACD_Histogram]
+	return TSFrame(results, index(ts), colnames = colnames)
+end
+
+function StochRSI(ts::TSFrame, period::Int=14; field::Symbol=:Close, ma_type::Symbol=:SMA)
+    prices = ts[:,field]
+    results = StochRSI(prices, period; ma_type=ma_type)
+    colnames = [:StochRSI_K, :StochRSI_D]
+    return TSFrame(results, index(ts), colnames=colnames)
+end
+
+# MISO ------------------------------------------------------------------------
+
+function ADL(ts::TSFrame; field::Vector{Symbol} = [:High, :Low, :Close, :Volume])
+	prices = ts[:, field] |> Matrix
+	results = ADL(prices)
+	colnames = [:ADL]
+	return TSFrame(results, index(ts), colnames = colnames)
+end
+
+function ATR(ts::TSFrame, period::Int=14; field::Vector{Symbol}=[:High, :Low, :Close], ma_type::Symbol=:EMA)
+    prices = ts[:,field] |> Matrix
+    results = ATR(prices; period=period, ma_type=ma_type)
+    col_name = :ATR
+    return TSFrame(results, index(ts), colnames=[col_name])
+end
+
+function ChaikinOsc(ts::TSFrame; field::Vector{Symbol} = [:High, :Low, :Close, :Volume], fast::Int = 3, slow::Int = 10)
+	prices = ts[:, field] |> Matrix
+	results = ChaikinOsc(prices; fast = fast, slow = slow)
+	colnames = [:ChaikinOsc]
+	return TSFrame(results, index(ts), colnames = colnames)
+end
+
+# MIMO ------------------------------------------------------------------------
+
+function Stoch(ts::TSFrame, period::Int = 14; field::Vector{Symbol} = [:High, :Low, :Close], ma_type::Symbol = :SMA)
+	prices = ts[:, field] |> Matrix
+	results = Stoch(prices, period; ma_type = ma_type)
+	colnames = [:Stoch_K, :Stoch_D]
+	return TSFrame(results, index(ts), colnames = colnames)
+end
+
+function WR(ts::TSFrame, period::Int=14; field::Vector{Symbol} = [:High, :Low, :Close])
+	prices = ts[:, field] |> Matrix
+	results = WR(prices, period)
+	colnames = [:WR, :WR_EMA]
+	return TSFrame(results, index(ts), colnames = colnames)
+end
+"""
