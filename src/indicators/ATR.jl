@@ -97,7 +97,8 @@ Algorithm overview:
 2. Apply specified moving average to True Range values
 3. Return results in TSFrame format
 """
-@inline Base.@propagate_inbounds function ATR(prices::Matrix{Float64}, period::Int=14; ma_type::Symbol=:EMA)
+@inline Base.@propagate_inbounds function ATR(prices::Matrix{Float64}; n::Int=14, ma_type::Symbol=:EMA)
+    period = n
     if size(prices, 2) != 3
         throw(ArgumentError("prices matrix must have 3 columns [high low close]"))
     end
@@ -109,11 +110,11 @@ Algorithm overview:
     true_ranges = TR(prices)
 
     if ma_type == :SMA
-        return SMA(true_ranges, period)
+        return SMA(true_ranges; n=period)
     elseif ma_type == :EMA
-        return EMA(true_ranges, period)
+        return EMA(true_ranges; n=period)
     elseif ma_type == :SMMA || ma_type == :RMA
-        return SMMA(true_ranges, period)
+        return SMMA(true_ranges; n=period)
     else
         throw(ArgumentError("ma_type must be either :SMA or :EMA"))
     end
@@ -140,10 +141,12 @@ end
     return result
 end
 
-function ATR(ts::TSFrame, period::Int=14; field::Vector{Symbol}=[:High, :Low, :Close], ma_type::Symbol=:EMA)
-    prices = ts[:,field] |> Matrix
-    results = ATR(prices, period; ma_type=ma_type)
-    col_name = :ATR
-    return TSFrame(results, index(ts), colnames=[col_name])
-end
-export ATR
+@prep_miso ATR [:High, :Low, :Close] n=14 ma_type=EMA
+
+# function ATR(ts::TSFrame, period::Int=14; field::Vector{Symbol}=[:High, :Low, :Close], ma_type::Symbol=:EMA)
+#     prices = ts[:,field] |> Matrix
+#     results = ATR(prices, period; ma_type=ma_type)
+#     col_name = :ATR
+#     return TSFrame(results, index(ts), colnames=[col_name])
+# end
+# export ATR

@@ -1,11 +1,11 @@
 # Accumulation/Distribution Indicator
-function ADL(ts::TSFrame; field::Vector{Symbol} = [:High, :Low, :Close, :Volume])
-	prices = ts[:, field] |> Matrix
-	results = ADL(prices)
-	colnames = [:ADL]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-export ADL
+# function ADL(ts::TSFrame; field::Vector{Symbol} = [:High, :Low, :Close, :Volume])
+# 	prices = ts[:, field] |> Matrix
+# 	results = ADL(prices)
+# 	colnames = [:ADL]
+# 	return TSFrame(results, index(ts), colnames = colnames)
+# end
+# export ADL
 
 @inline Base.@propagate_inbounds function ADL(prices::Matrix{T}) where T <: AbstractFloat
     n = size(prices, 1)
@@ -43,3 +43,5 @@ export ADL
 
     return adl
 end
+
+@prep_miso ADL [:High, :Low, :Close, :Volume]

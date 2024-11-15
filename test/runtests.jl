@@ -1,5 +1,5 @@
 using Foxtail
-using Test, Dates, CSV, TSFrames
+using Test, CSV, TSFrames
 
 tests = [
     "CircBuff",

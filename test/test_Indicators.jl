@@ -1,7 +1,7 @@
-@testset "Moving Averages" begin
+@testset "Indicators SISO" begin
     data_vec = collect(1.0:30.0)
     aapl = CSV.read(joinpath(dirname(@__FILE__), "aapl.csv"), TSFrame)
-    data_ts = aapl[Year(2024)]
+    data_ts = aapl[end-100:end]
 
     @testset "ALMA" begin
         @test ALMA(data_vec) isa Vector{Float64}
@@ -59,6 +59,16 @@
         @test ma isa TSFrame
         @test names(ma)[1] == "KAMA_50"
         @test KAMA(data_ts; fast=5, slow=25, n=15) isa TSFrame
+    end
+
+    @testset "RSI" begin
+        @test RSI(data_vec) isa Vector{Float64}
+        @test RSI(data_vec; n=5) isa Vector{Float64}
+        @test RSI(data_ts) isa TSFrame
+        ma = RSI(data_ts; n=50)
+        @test ma isa TSFrame
+        @test names(ma)[1] == "RSI_50"
+        @test RMA(data_ts; n=25) isa TSFrame
     end
 
     @testset "SMA" begin
@@ -126,7 +136,37 @@
         @test ma isa TSFrame
         @test names(ma)[1] == "ZLEMA_50"
     end
+end
 
+@testset "Indicators MISO" begin
+    vec3 = rand(100,3) * 100
+    vec4 = rand(100,4) * 100
+    aapl = CSV.read(joinpath(dirname(@__FILE__), "aapl.csv"), TSFrame)
+    data_ts = aapl[end-100:end]
 
+    @testset "ADL" begin
+        @test ADL(vec4) isa Vector{Float64}
+        @test ADL(data_ts) isa TSFrame
+        @test names(ADL(data_ts))[1] == "ADL"
+    end
 
+    @testset "ATR" begin
+        @test ATR(vec3) isa Vector{Float64}
+        @test ATR(vec3; n=42) isa Vector{Float64}
+        @test ATR(vec3; n=42, ma_type=:SMA) isa Vector{Float64}
+        @test ATR(vec3; n=42, ma_type=:SMMA) isa Vector{Float64}
+        @test ATR(data_ts) isa TSFrame
+        atr = ATR(data_ts; n=42)
+        @test atr isa TSFrame
+        @test names(atr)[1] == "ATR_42"
+    end
+
+    @testset "ChaikinOsc" begin
+        @test ChaikinOsc(vec4) isa Vector{Float64}
+        @test ChaikinOsc(vec4; fast=10, slow=30) isa Vector{Float64}
+        @test ChaikinOsc(data_ts) isa TSFrame
+        co = ChaikinOsc(data_ts; fast=10, slow=30)
+        @test co isa TSFrame
+        @test names(co)[1] == "ChaikinOsc"
+    end
 end
