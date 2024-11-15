@@ -4,10 +4,14 @@ authors = ["Taka YMMT <dev@ymmt.cc>"]
 version = "0.1.0-DEV"
 
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 TSFrames = "9f90e835-9451-4aaa-bcb1-743a1b8d2f84"
 
 [compat]
+CSV = "0.10.15"
+Dates = "1.11.0"
 LinearAlgebra = "1.11.0"
 TSFrames = "0.2.2"
 julia = "1.11"

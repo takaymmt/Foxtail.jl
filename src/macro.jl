@@ -71,11 +71,7 @@ end
 macro prep_siso(name, args...)
     params, kw_args, call_args = process_args(args)
     haskey(params, :field) || push!(kw_args, Expr(:kw, Expr(:(::), esc(:field), Symbol), :(:Close)))
-    if haskey(params, :n)
-        colex = Expr(:call, :Symbol, QuoteNode(name), QuoteNode(:_), :n)
-    else
-        colex = QuoteNode(name)
-    end
+    colex = haskey(params, :n) ? Expr(:call, :Symbol, QuoteNode(name), QuoteNode(:_), :n) : QuoteNode(name)
 
     return quote
         function $(esc(name))(ts::TSFrame; $(kw_args...))
