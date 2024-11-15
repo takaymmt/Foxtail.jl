@@ -1,5 +1,5 @@
 """
-    SMA(data::Vector{T}, period::Int) where T
+    SMA(data::Vector{T}; n::Int) where T
 
 Calculate Simple Moving Average (SMA) for a given time series data.
 
@@ -9,7 +9,7 @@ memory management.
 
 # Arguments
 - `data::Vector{T}`: Input price vector of any numeric type
-- `period::Int`: Length of the moving window for average calculation
+- `n::Int`: Length of the moving window for average calculation
 
 # Returns
 - `Vector{T}`: Vector containing SMA values for each point in the input data
@@ -22,11 +22,11 @@ The function maintains a running sum using a circular buffer to optimize perform
 # Example
 ```julia
 prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-period = 4
-result = SMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]
+result = SMA(prices; n=4)
 ```
 """
-@inline Base.@propagate_inbounds function SMA(data::Vector{T}, period::Int) where T
+@inline Base.@propagate_inbounds function SMA(data::Vector{T}; n::Int=14) where T
+    period = n
     buf = CircBuff{T}(period)
     results = zeros(T, length(data))
     running_sum = zero(T)
@@ -49,9 +49,10 @@ result = SMA(prices, period)  # Returns: [1.0, 1.5, 2.0, 2.5, 3.5, 4.5, 5.5, 6.5
     return results
 end
 
-@prep_SISO SMA
+@prep_siso SMA n=14
 
-@inline Base.@propagate_inbounds function SMA_stats(prices::Vector{T}, period::Int) where T
+@inline Base.@propagate_inbounds function SMA_stats(prices::Vector{T}; n::Int=14) where T
+    period = n
     buf = CircBuff{T}(period)
     results = zeros(T, (length(prices), 2))  # Column 1: SMA, Column 2: STD
     running_sum = zero(T)
@@ -79,4 +80,5 @@ end
     end
     return results
 end
+
 # export SMA_stats

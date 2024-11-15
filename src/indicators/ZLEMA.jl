@@ -49,7 +49,8 @@ result = ZLEMA(prices, period)  # Returns: [1.0, 1.67, 2.83, 4.1, 5.26, 6.36, 7.
 
 See also: [`EMA`](@ref)
 """
-@inline Base.@propagate_inbounds function ZLEMA(data::Vector{T}, period::Int=7) where T
+@inline Base.@propagate_inbounds function ZLEMA(data::Vector{T}; n::Int=10) where T
+    period = n
     buf = CircBuff{T}(period)
     results = zeros(T, length(data))
     lag = 0
@@ -77,4 +78,4 @@ See also: [`EMA`](@ref)
     return results
 end
 
-@prep_SISO ZLEMA
+@prep_siso ZLEMA n=10

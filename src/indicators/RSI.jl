@@ -95,4 +95,4 @@ Algorithm overview:
     return rsi
 end
 
-@prep_SISO RSI
+@prep_siso RSI n=14

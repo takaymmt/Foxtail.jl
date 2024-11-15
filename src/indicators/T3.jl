@@ -45,19 +45,18 @@ Key characteristics:
 # Example
 ```julia
 prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-period = 8
-result = T3(prices, period, a=0.1)  # Returns ultra-smooth trend values
+result = T3(prices; n=4, a=0.7)  # Returns ultra-smooth trend values
 ```
 
 See also: [`EMA`](@ref), [`TEMA`](@ref)
 """
-@inline Base.@propagate_inbounds function T3(prices::Vector{T}, period::Int; a::Float64 = 0.7) where T
-    EMA1 = EMA(prices, period)
-	EMA2 = EMA(EMA1, period)
-	EMA3 = EMA(EMA2, period)
-	EMA4 = EMA(EMA3, period)
-	EMA5 = EMA(EMA4, period)
-	EMA6 = EMA(EMA5, period)
+@inline Base.@propagate_inbounds function T3(prices::Vector{T}; n::Int=10, a::Float64 = 0.7) where T
+    EMA1 = EMA(prices; n=n)
+	EMA2 = EMA(EMA1; n=n)
+	EMA3 = EMA(EMA2; n=n)
+	EMA4 = EMA(EMA3; n=n)
+	EMA5 = EMA(EMA4; n=n)
+	EMA6 = EMA(EMA5; n=n)
 
 	c1 = -a^3
 	c2 = 3a^2 + 3a^3
@@ -67,4 +66,4 @@ See also: [`EMA`](@ref), [`TEMA`](@ref)
 	return c1 * EMA6 + c2 * EMA5 + c3 * EMA4 + c4 * EMA3
 end
 
-@prep_SISO T3 (a=0.7)
+@prep_siso T3 n=10 (a=0.7)

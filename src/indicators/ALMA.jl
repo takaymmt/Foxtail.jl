@@ -69,9 +69,10 @@ Short-term trading:  window=9,  offset=0.85, sigma=6
 Medium-term trading: window=21, offset=0.85, sigma=6
 Long-term trading:   window=50, offset=0.85, sigma=6
 """
-@inline Base.@propagate_inbounds function ALMA(prices::Vector, period::Int; offset::Float64=0.85, sigma::Float64=6.0)
-	n = length(prices)
-	result = Vector{Float64}(undef, n)
+@inline Base.@propagate_inbounds function ALMA(prices::Vector; n::Int=10, offset::Float64=0.85, sigma::Float64=6.0)
+	period = n
+	len = length(prices)
+	result = Vector{Float64}(undef, len)
 	result[1] = copy(prices[1])
 
 	m = 0.0
@@ -86,10 +87,10 @@ Long-term trading:   window=50, offset=0.85, sigma=6
 		weights ./= sum(weights)
 		result[window] = dot(view(prices, 1:window), view(weights,1:window))
 	end
-	@inbounds for i in (period+1):n
+	@inbounds for i in (period+1):len
 		result[i] = dot(view(prices, (i-period+1):i), weights)
 	end
 	return result
 end
 
-@prep_SISO ALMA (offset=0.85, sigma=6.0)
+@prep_siso ALMA n=10 (offset=0.85, sigma=6.0)

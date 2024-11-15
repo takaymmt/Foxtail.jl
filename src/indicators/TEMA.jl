@@ -40,11 +40,11 @@ result = TEMA(prices, period)  # Returns highly responsive trend values
 
 See also: [`EMA`](@ref), [`DEMA`](@ref)
 """
-@inline Base.@propagate_inbounds function TEMA(prices::Vector{T}, period::Int) where T
-    EMA1 = EMA(prices, period)
-	EMA2 = EMA(EMA1, period)
-	EMA3 = EMA(EMA2, period)
+@inline Base.@propagate_inbounds function TEMA(prices::Vector{T}; n::Int=10) where T
+    EMA1 = EMA(prices; n=n)
+	EMA2 = EMA(EMA1; n=n)
+	EMA3 = EMA(EMA2; n=n)
 	return (EMA1 - EMA2) * 3 + EMA3
 end
 
-@prep_SISO TEMA
+@prep_siso TEMA n=10

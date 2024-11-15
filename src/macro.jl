@@ -36,58 +36,247 @@ end
 ```
 """
 
-macro prep_SISO(name, args...)
+function process_args(args)
     params = Dict{Any,Any}()
     kw_args = Expr[]
     call_args = Expr[]
 
-    if isempty(args)
-        params[:field] = :Close
-    else
-        for arg in args
-            if arg isa Expr && arg.head == :(=)
-                params[arg.args[1]] = arg.args[2]
-            elseif arg isa Expr && arg.head == :tuple
-                for pa in arg.args
-                    params[pa.args[1]] = pa.args[2]
-                end
-            else
-                error("Expected named parameters")
+    # Parse arguments into params dictionary
+    for arg in args
+        if arg isa Expr && arg.head == :(=)
+            params[arg.args[1]] = arg.args[2]
+        elseif arg isa Expr && arg.head == :tuple
+            for pa in arg.args
+                params[pa.args[1]] = pa.args[2]
             end
-        end
-        get!(params, :field, :Close)
-        for (key, val) in params
-            key == :field && continue
-            typ = typeof(val)
-            push!(kw_args, Expr(:kw, Expr(:(::), esc(key), typ), val))
-            push!(call_args, Expr(:kw, esc(key), esc(key)))
+        else
+            error("Expected named parameters")
         end
     end
 
-    fld = params[:field]
+    # Build keyword and call arguments
+    for (key, val) in params
+        typ = typeof(val)
+        if typ == Symbol
+            push!(kw_args, Expr(:kw, Expr(:(::), esc(key), typ), QuoteNode(val)))
+        else
+            push!(kw_args, Expr(:kw, Expr(:(::), esc(key), typ), val))
+        end
+        key == :field ||push!(call_args, Expr(:kw, esc(key), esc(key)))
+    end
 
-    if isempty(args)
-        quote
-            function $(esc(name))(ts::TSFrame, period::Int=10; field::Symbol=$(QuoteNode(fld)))
-                prices = ts[:, field]
-                results = $(esc(name))(prices, period)
-                col_name = Symbol($name, :_, period)
-                return TSFrame(results, index(ts), colnames=[col_name])
-            end
-            export $(esc(name))
-        end
+    return params, kw_args, call_args
+end
+
+macro prep_siso(name, args...)
+    params, kw_args, call_args = process_args(args)
+    haskey(params, :field) || push!(kw_args, Expr(:kw, Expr(:(::), esc(:field), Symbol), :(:Close)))
+    if haskey(params, :n)
+        colex = Expr(:call, :Symbol, QuoteNode(name), QuoteNode(:_), :n)
     else
-        quote
-            function $(esc(name))(ts::TSFrame, period::Int=10; field::Symbol=$(QuoteNode(fld)), $(kw_args...))
-                prices = ts[:, field]
-                results = $(esc(name))(prices, period; $(call_args...))
-                col_name = Symbol($name, :_, period)
-                return TSFrame(results, index(ts), colnames=[col_name])
-            end
-            export $(esc(name))
+        colex = QuoteNode(name)
+    end
+
+    return quote
+        function $(esc(name))(ts::TSFrame; $(kw_args...))
+            prices = ts[:, field]
+            results = $(esc(name))(prices; $(call_args...))
+            col_name = $colex
+            return TSFrame(results, index(ts), colnames=[col_name])
         end
+        export $(esc(name))
     end
 end
+
+# macro prep_SISO2(name, args...)
+#     params, kw_args, call_args = process_args(args)
+
+#     prd = get!(params, :period, 14)
+#     fld = get!(params, :field, :Close)
+#     delete!(params, :period)
+#     delete!(params, :field)
+
+#     if isempty(params)
+#         if prd isa Int
+#             quote
+#                 function $(esc(name))(ts::TSFrame, period::Int=$prd; field::Symbol=$(QuoteNode(fld)))
+#                     prices = ts[:, field]
+#                     results = $(esc(name))(prices, period)
+#                     col_name = Symbol($name, :_, period)
+#                     return TSFrame(results, index(ts), colnames=[col_name])
+#                 end
+#                 export $(esc(name))
+#             end
+#         else
+#             quote
+#                 function $(esc(name))(ts::TSFrame; field::Symbol=$(QuoteNode(fld)))
+#                     prices = ts[:, field]
+#                     results = $(esc(name))(prices)
+#                     col_name = Symbol($name)
+#                     return TSFrame(results, index(ts), colnames=[col_name])
+#                 end
+#                 export $(esc(name))
+#             end
+#         end
+#     else
+#         if prd isa Int
+#             quote
+#                 function $(esc(name))(ts::TSFrame, period::Int=$prd; field::Symbol=$(QuoteNode(fld)), $(kw_args...))
+#                     prices = ts[:, field]
+#                     results = $(esc(name))(prices, period; $(call_args...))
+#                     col_name = Symbol($name, :_, period)
+#                     return TSFrame(results, index(ts), colnames=[col_name])
+#                 end
+#                 export $(esc(name))
+#             end
+#         else
+#             quote
+#                 function $(esc(name))(ts::TSFrame; field::Symbol=$(QuoteNode(fld)), $(kw_args...))
+#                     prices = ts[:, field]
+#                     results = $(esc(name))(prices; $(call_args...))
+#                     col_name = Symbol($name)
+#                     return TSFrame(results, index(ts), colnames=[col_name])
+#                 end
+#             end
+#         end
+#     end
+# end
+
+# macro a(args...)
+#     for v in args
+#         println(v)
+#         println(v.head)
+#         println(v.args)
+#         println(v.args[1])
+#         println(v.args[2])
+#         println("---")
+#     end
+# end
+# macro prep_MISO(name, in, args...)
+#     fields = if in.head == :vect
+#         [x for x in in.args]
+#     else
+#         error("Second argument must be a vector of field names")
+#     end
+
+#     params = Dict{Any,Any}()
+#     kw_args = Expr[]
+#     call_args = Expr[]
+
+#     for arg in args
+#         if arg isa Expr && arg.head == :(=)
+#             params[arg.args[1]] = arg.args[2]
+#         elseif arg isa Expr && arg.head == :tuple
+#             for pa in arg.args
+#                 params[pa.args[1]] = pa.args[2]
+#             end
+#         else
+#             error("Expected named parameters")
+#         end
+#     end
+
+#     for (key, val) in params
+#         key == :field && continue
+#         key == :period && (params[:period] = val; continue)
+#         typ = typeof(val)
+#         push!(kw_args, Expr(:kw, Expr(:(::), esc(key), typ), val))
+#         push!(call_args, Expr(:kw, esc(key), esc(key)))
+#     end
+
+#     get!(params, :period, 14)
+#     prd = params[:period]
+
+#     if isempty(args)
+#         if prd isa Int
+#             func_args = :(ts::TSFrame, period::Int=$prd; field::Vector{Symbol}=$fields)
+#             func_rslt = :(results = $(esc(name))(prices, period))
+#             func_col  = :(Symbol($name, :_, period))
+#         else
+#             func_args = :(ts::TSFrame; field::Vector{Symbol}=$fields)
+#             func_rslt = :(results = $(esc(name))(prices))
+#             func_col  = :($name)
+#         end
+#     else
+#         if prd isa Int
+#             func_args = :(ts::TSFrame, period::Int=$prd; field::Vector{Symbol}=$fields, $(kw_args...))
+#             func_rslt = :(results = $(esc(name))(prices, period; $(call_args...)))
+#             func_col  = :(Symbol($name, :_, period))
+#         else
+#             func_args = :(ts::TSFrame; field::Vector{Symbol}=$fields, $(kw_args...))
+#             func_rslt = :(results = $(esc(name))(prices; $(call_args...)))
+#             func_col  = :($name)
+#         end
+#     end
+
+#     quote
+#         function $(esc(name))$(func_args)
+#             prices = ts[:, field] |> Matrix
+#             $(func_rslt)
+#             return TSFrame(results, index(ts), colnames=[$(func_col)])
+#         end
+#         export $(esc(name))
+#     end
+# end
+
+# macro prep_MISO(name, in, args...)
+#     fields = if in.head == :vect
+#         [x for x in in.args]
+#     else
+#         error("Second argument must be a vector of field names")
+#     end
+
+#     params, kw_args, call_args = process_args(args)
+
+#     prd = get!(params, :period, 14)
+#     delete!(params, :period)
+
+#     if isempty(params)
+#         if prd isa Int
+#             quote
+#                 function $(esc(name))(ts::TSFrame, period::Int=$prd; field::Vector{Symbol}=$fields)
+#                     prices = ts[:, field] |> Matrix
+#                     results = $(esc(name))(prices, period)
+#                     col_name = Symbol($name, :_, period)
+#                     return TSFrame(results, index(ts), colnames=[col_name])
+#                 end
+#                 export $(esc(name))
+#             end
+#         else
+#             quote
+#                 function $(esc(name))(ts::TSFrame; field::Vector{Symbol}=$fields)
+#                     prices = ts[:, field] |> Matrix
+#                     results = $(esc(name))(prices)
+#                     col_name = Symbol($name)
+#                     return TSFrame(results, index(ts), colnames=[col_name])
+#                 end
+#                 export $(esc(name))
+#             end
+#         end
+#     else
+#         if prd isa Int
+#             quote
+#                 function $(esc(name))(ts::TSFrame, period::Int=$prd; field::Vector{Symbol}=$fields, $(kw_args...))
+#                     prices = ts[:, field] |> Matrix
+#                     results = $(esc(name))(prices, period; $(call_args...))
+#                     col_name = Symbol($name, :_, period)
+#                     return TSFrame(results, index(ts), colnames=[col_name])
+#                 end
+#                 export $(esc(name))
+#             end
+#         else
+#             quote
+#                 function $(esc(name))(ts::TSFrame; field::Vector{Symbol}=$fields, $(kw_args...))
+#                     prices = ts[:, field] |> Matrix
+#                     results = $(esc(name))(prices, period; $(call_args...))
+#                     col_name = Symbol($name)
+#                     return TSFrame(results, index(ts), colnames=[col_name])
+#                 end
+#                 export $(esc(name))
+#             end
+#         end
+#     end
+# end
+
 
 """
 # SIMO ------------------------------------------------------------------------

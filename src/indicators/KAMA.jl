@@ -54,7 +54,7 @@ kama_custom = KAMA(ts, 15, field=:Close, fast=3, slow=40)
 
 See also: [`_KAMA`](@ref) for the underlying implementation details.
 """
-@inline Base.@propagate_inbounds function KAMA(data::AbstractVector{T}, n::Int=10; fast::Int=2, slow::Int=30) where T <: AbstractFloat
+@inline Base.@propagate_inbounds function KAMA(data::AbstractVector{T}; n::Int=10, fast::Int=2, slow::Int=30) where T <: AbstractFloat
     length(data) < n && throw(ArgumentError("Input data length is shorter than the period"))
 
     # Pre-allocate memory (minimum required arrays)
@@ -99,4 +99,4 @@ See also: [`_KAMA`](@ref) for the underlying implementation details.
     return kama
 end
 
-@prep_SISO KAMA (fast=2, slow=30)
+@prep_siso KAMA n=10 (fast=2, slow=30)

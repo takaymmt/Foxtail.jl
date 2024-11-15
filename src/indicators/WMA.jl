@@ -36,8 +36,9 @@ period = 4
 result = WMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
 ```
 """
-@inline Base.@propagate_inbounds function WMA(data::Vector{T}, period::Int) where T
+@inline Base.@propagate_inbounds function WMA(data::Vector{T}; n::Int=10) where T
     # See https://en.wikipedia.org/wiki/Moving_average#Weighted_moving_average
+    period = n
     buf = CircBuff{T}(period)
     results = zeros(T, length(data))
     numerator = 0.0
@@ -60,4 +61,4 @@ result = WMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 4.0, 5.0, 6.0, 7
     return results
 end
 
-@prep_SISO WMA
+@prep_siso WMA n=10

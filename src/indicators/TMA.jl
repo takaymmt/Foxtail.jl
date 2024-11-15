@@ -36,12 +36,12 @@ result = TMA(prices, period)  # Returns: [1.0, 1.25, 1.75, 2.25, 3.0, 4.0, 5.0, 
 
 See also: [`SMA`](@ref)
 """
-@inline Base.@propagate_inbounds function TMA(prices::Vector{T}, period::Int) where T
-    SMA1 = SMA(prices, period)
-    return SMA(SMA1, div(period+1, 2))
+@inline Base.@propagate_inbounds function TMA(prices::Vector{T}; n::Int=10) where T
+    SMA1 = SMA(prices; n=n)
+    return SMA(SMA1; n=div(n+1, 2))
 end
 
-@prep_SISO TMA
+@prep_siso TMA n=10
 
-TRIMA(ts::TSFrame, period::Int; field::Symbol = :Close) = TMA(ts, period; field)
+TRIMA(ts::TSFrame; n::Int=10, field::Symbol = :Close) = TMA(ts; n=n, field=field)
 export TRIMA

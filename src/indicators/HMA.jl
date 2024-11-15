@@ -37,10 +37,10 @@ result = HMA(prices, period)  # Returns: [1.0, 1.44, 2.56, 3.89, 5.0, 6.0, 7.0, 
 
 See also: [`WMA`](@ref)
 """
-@inline Base.@propagate_inbounds function HMA(prices::Vector{T}, period::Int) where T
-    WMA1 = WMA(prices, div(period, 2))
-	WMA2 = WMA(prices, period)
-	return WMA(WMA1 * 2 - WMA2, round(Int, sqrt(period)))
+@inline Base.@propagate_inbounds function HMA(prices::Vector{T}; n::Int=10) where T
+    WMA1 = WMA(prices; n = div(n, 2))
+	WMA2 = WMA(prices; n = n)
+	return WMA(WMA1 * 2 - WMA2; n = round(Int, sqrt(n)))
 end
 
-@prep_SISO HMA
+@prep_siso HMA n=10

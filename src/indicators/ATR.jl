@@ -97,7 +97,7 @@ Algorithm overview:
 2. Apply specified moving average to True Range values
 3. Return results in TSFrame format
 """
-@inline Base.@propagate_inbounds function ATR(prices::Matrix{Float64}; ma_type::Symbol=:EMA, period::Int=14)
+@inline Base.@propagate_inbounds function ATR(prices::Matrix{Float64}, period::Int=14; ma_type::Symbol=:EMA)
     if size(prices, 2) != 3
         throw(ArgumentError("prices matrix must have 3 columns [high low close]"))
     end
@@ -142,7 +142,7 @@ end
 
 function ATR(ts::TSFrame, period::Int=14; field::Vector{Symbol}=[:High, :Low, :Close], ma_type::Symbol=:EMA)
     prices = ts[:,field] |> Matrix
-    results = ATR(prices; period=period, ma_type=ma_type)
+    results = ATR(prices, period; ma_type=ma_type)
     col_name = :ATR
     return TSFrame(results, index(ts), colnames=[col_name])
 end

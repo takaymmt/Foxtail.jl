@@ -37,10 +37,10 @@ result = DEMA(prices, period)  # Returns: [1.0, 1.89, 2.78, 3.67, 4.68, 5.74, 6.
 
 See also: [`EMA`](@ref)
 """
-@inline Base.@propagate_inbounds function DEMA(prices::Vector{T}, period::Int) where T
-    EMA1 = EMA(prices, period)
-	EMA2 = EMA(EMA1, period)
+@inline Base.@propagate_inbounds function DEMA(prices::Vector{T}; n::Int=10) where T
+    EMA1 = EMA(prices; n=n)
+	EMA2 = EMA(EMA1; n=n)
 	return EMA1 * 2 - EMA2
 end
 
-@prep_SISO DEMA
+@prep_siso DEMA n=10

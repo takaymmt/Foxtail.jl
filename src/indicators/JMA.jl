@@ -58,15 +58,16 @@ Implementation Notes:
 References:
 Based on Mark Jurik's original algorithm description and research.
 """
-@inline Base.@propagate_inbounds function JMA(data::Vector{Float64}, length::Int=7; phase::Float64=0.0)
-    n = size(data, 1)
-    jma = zeros(Float64, n)
+@inline Base.@propagate_inbounds function JMA(data::Vector{Float64}; n::Int=7, phase::Float64=0.0)
+    period = n
+    sz = size(data, 1)
+    jma = zeros(Float64, sz)
 
     # Initialize core parameters
-    beta = 0.45 * (length - 1) / (0.45 * (length - 1) + 2)
+    beta = 0.45 * (period - 1) / (0.45 * (period - 1) + 2)
 
     # Initialize length-dependent factors
-    len1 = log(sqrt(length)) / log(2.0) + 2
+    len1 = log(sqrt(period)) / log(2.0) + 2
     len1 = max(0.0, len1)
     pow1 = len1 - 2
     pow1 = max(0.5, pow1)
@@ -91,7 +92,7 @@ Based on Mark Jurik's original algorithm description and research.
     # First point initialization
     jma[1] = data[1]
 
-    @inbounds for i in 2:n
+    @inbounds for i in 2:sz
         # Calculate Jurik Bands
         del1 = data[i] - upper_band
         del2 = data[i] - lower_band
@@ -152,4 +153,4 @@ Based on Mark Jurik's original algorithm description and research.
     return jma
 end
 
-@prep_SISO JMA (phase=0.0)
+@prep_siso JMA n=7 (phase=0.0)

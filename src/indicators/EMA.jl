@@ -31,19 +31,20 @@ period = 4
 result = EMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 3.8, 4.68, 5.6, 6.57, 7.54, 8.52]
 ```
 """
-@inline Base.@propagate_inbounds function EMA(data::Vector{T}, period::Int=10) where T
+@inline Base.@propagate_inbounds function EMA(data::Vector{T}; n::Int=10) where T
+    period = n
     results = zeros(T, length(data))
     alpha = 0.0
 
     # First value initialization
     @inbounds results[1] = data[1]
-    
+
     # Calculate alpha for period > 1
     @inbounds for i in 2:period
         alpha = 2 / (1 + i)
         results[i] = data[i] * alpha + results[i-1] * (1 - alpha)
     end
-    
+
     # Fixed alpha for remaining values
     alpha = 2 / (1 + period)
     @inbounds for i in (period+1):length(data)
@@ -52,7 +53,7 @@ result = EMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 3.8, 4.68, 5.6, 
     return results
 end
 
-@prep_SISO EMA
+@prep_siso EMA n=10
 
 """
     EMA_stats(data::Vector{T}, period::Int) where T
@@ -78,45 +79,46 @@ Uses different smoothing factors based on the position:
 Variance is updated using the recursive formula:
 var[t] = (1 - α) * (var[t-1] + α * (x[t] - mean[t-1])²)
 """
-@inline Base.@propagate_inbounds function EMA_stats(data::Vector{T}, period::Int=10) where T
+@inline Base.@propagate_inbounds function EMA_stats(data::Vector{T}; n::Int=10) where T
+    period = n
     results = zeros(T, length(data), 2)
-    α = 0.0
-    
+    alpha = 0.0
+
     # Initialize with first value
     @inbounds results[1, 1] = data[1]  # mean
     @inbounds results[1, 2] = zero(T)  # std
-    
+
     # Previous values for recursive calculation
     prev_mean = data[1]
     prev_variance = zero(T)
-    
+
     @inbounds for i in 2:length(data)
         # Set appropriate alpha based on position
         if i > period
-            α = 2 / (1 + period)
+            alpha = 2 / (1 + period)
         else
-            α = 2 / (1 + i)
+            alpha = 2 / (1 + i)
         end
-        
+
         # Calculate difference from previous mean
         diff = data[i] - prev_mean
-        
+
         # Update mean
-        incr = α * diff
+        incr = alpha * diff
         new_mean = prev_mean + incr
-        
+
         # Update variance using the recursive formula
-        new_variance = (1 - α) * (prev_variance + diff * incr)
-        
+        new_variance = (1 - alpha) * (prev_variance + diff * incr)
+
         # Store results
         results[i, 1] = new_mean
         results[i, 2] = sqrt(max(zero(T), new_variance))
-        
+
         # Update previous values for next iteration
         prev_mean = new_mean
         prev_variance = new_variance
     end
-    
+
     return results
 end
 

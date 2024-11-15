@@ -1,9 +1,10 @@
 using Foxtail
-using Test
+using Test, Dates, CSV, TSFrames
 
 tests = [
     "CircBuff",
-    "CircDeque"
+    "CircDeque",
+    "Indicators"
 ]
 
 @testset "Foxtail.jl" begin
