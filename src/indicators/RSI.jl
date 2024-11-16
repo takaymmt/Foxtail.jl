@@ -51,7 +51,7 @@ Algorithm overview:
 4. Calculate RS ratio for each point
 5. Transform RS into RSI using the formula
 """
-@inline Base.@propagate_inbounds function RSI(prices::Vector{Float64}; n::Int=14, smoothing::Symbol=:SMMA)
+@inline Base.@propagate_inbounds function RSI(prices::Vector{Float64}; n::Int=14, ma_type::Symbol=:SMMA)
     period = n
     period < 1 && throw(ArgumentError("period must be positive"))
 
@@ -72,10 +72,10 @@ Algorithm overview:
     end
 
     # Calculate RS (Relative Strength)
-    if smoothing == :SMMA
+    if ma_type == :SMMA
         gains = SMMA(gains; n=period)
         losses = SMMA(losses; n=period)
-    elseif smoothing == :EMA
+    elseif ma_type == :EMA
         gains = EMA(gains; n=period)
         losses = EMA(losses; n=period)
     else  # Simple moving average
@@ -96,4 +96,4 @@ Algorithm overview:
     return rsi
 end
 
-@prep_siso RSI n=14
+@prep_siso RSI n=14 ma_type=SMMA

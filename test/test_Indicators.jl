@@ -65,6 +65,8 @@
         @test RSI(data_vec) isa Vector{Float64}
         @test RSI(data_vec; n=5) isa Vector{Float64}
         @test RSI(data_ts) isa TSFrame
+        @test RSI(data_ts; ma_type=:EMA) isa TSFrame
+        @test RSI(data_ts; ma_type=:SMMA) isa TSFrame
         ma = RSI(data_ts; n=50)
         @test ma isa TSFrame
         @test names(ma)[1] == "RSI_50"
@@ -168,5 +170,45 @@ end
         co = ChaikinOsc(data_ts; fast=10, slow=30)
         @test co isa TSFrame
         @test names(co)[1] == "ChaikinOsc"
+    end
+end
+
+@testset "Indicators SIMO" begin
+    data_vec = collect(1.0:30.0)
+    aapl = CSV.read(joinpath(dirname(@__FILE__), "aapl.csv"), TSFrame)
+    data_ts = aapl[end-100:end]
+
+    @testset "BollingerBands" begin
+        @test BB(data_vec) isa Matrix{Float64}
+        @test BB(data_vec; num_std=3.0) isa Matrix{Float64}
+        @test BB(data_ts) isa TSFrame
+        @test BB(data_ts; num_std=3.0) isa TSFrame
+        @test BB(data_ts; ma_type=:EMA) isa TSFrame
+        @test BB(data_ts; ma_type=:SMMA) isa TSFrame
+        ind = BB(data_ts)
+        @test names(ind)[1] == "BB_Center"
+        @test names(ind)[2] == "BB_Upper"
+        @test names(ind)[3] == "BB_Lower"
+    end
+
+    @testset "MACD" begin
+        @test MACD(data_vec) isa Matrix{Float64}
+        ind = MACD(data_ts)
+        @test ind isa TSFrame
+        @test names(ind)[1] == "MACD_Line"
+        @test names(ind)[2] == "MACD_Signal"
+        @test names(ind)[3] == "MACD_Histogram"
+    end
+
+    @testset "Stochastic RSI" begin
+        @test StochRSI(data_vec) isa Matrix{Float64}
+        @test StochRSI(data_ts) isa TSFrame
+        @test StochRSI(data_ts; ma_type=:EMA, k_smooth=3, d_smooth=5) isa TSFrame
+        @test StochRSI(data_ts; ma_type=:SMMA, k_smooth=4, d_smooth=6) isa TSFrame
+        @test StochRSI(data_ts; ma_type=:RMA, k_smooth=4, d_smooth=6) isa TSFrame
+        @test StochRSI(data_ts; ma_type=:WMA, k_smooth=6, d_smooth=8) isa TSFrame
+        ind = StochRSI(data_ts)
+        @test names(ind)[1] == "StochRSI_K"
+        @test names(ind)[2] == "StochRSI_D"
     end
 end

@@ -141,7 +141,7 @@ end
     return result
 end
 
-@prep_miso ATR [:High, :Low, :Close] n=14 ma_type=EMA
+@prep_miso ATR [High, Low, Close] n=14 ma_type=EMA
 
 # function ATR(ts::TSFrame, period::Int=14; field::Vector{Symbol}=[:High, :Low, :Close], ma_type::Symbol=:EMA)
 #     prices = ts[:,field] |> Matrix

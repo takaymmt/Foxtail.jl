@@ -1,5 +1,5 @@
 """
-    MinimaxQueue{T}
+    MinMaxQueue{T}
 
 A data structure that maintains both maximum and minimum values over a sliding window
 efficiently using the monotonic queue (also known as monotone queue) algorithm.
@@ -24,8 +24,8 @@ pairs to handle sliding window operations.
 
 # Example
 ```julia
-# Create a new MinimaxQueue for window size 3
-q = MinimaxQueue{Float64}(3)
+# Create a new MinMaxQueue for window size 3
+q = MinMaxQueue{Float64}(3)
 # Update with new values
 update!(q, 10.0, 10.0, 1) # high and low values can be different
 update!(q, 5.0, 5.0, 2)
@@ -47,28 +47,28 @@ min_val = get_min(q) # Returns the minimum value in current window
 - "Sliding Window Maximum (Maximum of all subarrays of size k)" algorithm
 - Monotonic Queue data structure pattern
 """
-struct MinimaxQueue{T}
+struct MinMaxQueue{T}
     max_data::CircDeque{Tuple{T, Int}}  # (value, index) pairs
     min_data::CircDeque{Tuple{T, Int}}
 
-    function MinimaxQueue{T}(n::Int) where T
+    function MinMaxQueue{T}(n::Int) where T
         new(CircDeque{Tuple{T, Int}}(n), CircDeque{Tuple{T, Int}}(n))
     end
 end
 
 """
-    update!(q::MinimaxQueue{T}, high::T, low::T, idx::Int) where T
+    update!(q::MinMaxQueue{T}, high::T, low::T, idx::Int) where T
 
-Update the MinimaxQueue with new high and low values at the given index.
+Update the MinMaxQueue with new high and low values at the given index.
 Maintains monotonicity in both deques.
 
 # Arguments
-- `q`: The MinimaxQueue to update
+- `q`: The MinMaxQueue to update
 - `high`: The high value to add
 - `low`: The low value to add
 - `idx`: The index associated with these values
 """
-@inline function update!(q::MinimaxQueue{T}, high::T, low::T, idx::Int) where T
+@inline function update!(q::MinMaxQueue{T}, high::T, low::T, idx::Int) where T
     while !isempty(q.max_data) && last(q.max_data)[1] < high
         pop!(q.max_data)
     end
@@ -81,16 +81,16 @@ Maintains monotonicity in both deques.
 end
 
 """
-    remove_old!(q::MinimaxQueue, idx::Int)
+    remove_old!(q::MinMaxQueue, idx::Int)
 
 Remove all elements with indices less than or equal to the given index.
 Used to maintain the sliding window by removing outdated values.
 
 # Arguments
-- `q`: The MinimaxQueue to update
+- `q`: The MinMaxQueue to update
 - `idx`: Remove all elements with index <= idx
 """
-@inline function remove_old!(q::MinimaxQueue, idx::Int)
+@inline function remove_old!(q::MinMaxQueue, idx::Int)
     while !isempty(q.max_data) && first(q.max_data)[2] <= idx
         popfirst!(q.max_data)
     end
@@ -100,25 +100,25 @@ Used to maintain the sliding window by removing outdated values.
 end
 
 """
-    get_max(q::MinimaxQueue)
+    get_max(q::MinMaxQueue)
 
 Return the maximum value in the current window.
 
 # Arguments
-- `q`: The MinimaxQueue to query
+- `q`: The MinMaxQueue to query
 """
-@inline function get_max(q::MinimaxQueue)
+@inline function get_max(q::MinMaxQueue)
     return first(q.max_data)[1]
 end
 
 """
-    get_min(q::MinimaxQueue)
+    get_min(q::MinMaxQueue)
 
 Return the minimum value in the current window.
 
 # Arguments
-- `q`: The MinimaxQueue to query
+- `q`: The MinMaxQueue to query
 """
-@inline function get_min(q::MinimaxQueue)
+@inline function get_min(q::MinMaxQueue)
     return first(q.min_data)[1]
 end

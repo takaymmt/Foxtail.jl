@@ -1,38 +1,28 @@
-function StochRSI(ts::TSFrame, period::Int=14; field::Symbol=:Close, ma_type::Symbol=:SMA)
-    prices = ts[:,field]
-    results = StochRSI(prices, period; ma_type=ma_type)
-    colnames = [:StochRSI_K, :StochRSI_D]
-    return TSFrame(results, index(ts), colnames=colnames)
-end
-
-@inline Base.@propagate_inbounds function StochRSI(prices::Vector{Float64}, period::Int=14;
-    k_smooth::Int=3, d_smooth::Int=3, ma_type::Symbol=:SMA)
-
+@inline Base.@propagate_inbounds function StochRSI(prices::Vector{Float64}; n::Int=14, k_smooth::Int=3, d_smooth::Int=3, ma_type::Symbol=:SMA)
+    period = n
     if period < 1 || k_smooth < 1 || d_smooth < 1
         throw(ArgumentError("periods must be positive"))
     end
 
-    n = length(prices)
-    if n < period * 2  # Need extra data for both RSI and Stochastic calculation
+    len = length(prices)
+    if len < period * 2  # Need extra data for both RSI and Stochastic calculation
         throw(ArgumentError("price series length must be greater than period * 2"))
     end
 
     # Calculate RSI first
-    rsi = RSI(prices, period; smoothing=ma_type)
+    rsi = RSI(prices; n=period, ma_type=ma_type)
 
-    raw_k = zeros(n)
-    stoch_k = zeros(n)
-    stoch_d = zeros(n)
+    raw_k = zeros(len)
+    stoch_k = zeros(len)
+    stoch_d = zeros(len)
 
-    max_q = MonotoneQueue{Float64}(period+1)
-	min_q = MonotoneQueue{Float64}(period+1)
+    mmq = MinMaxQueue{Float64}(period+1)
 
     @inbounds for i in 1:period
-		push_back!(max_q, rsi[i], i)
-		push_back_min!(min_q, rsi[i], i)
+        update!(mmq, rsi[i], rsi[i], i)
 
-		w_max = get_extreme(max_q)
-		w_min = get_extreme(min_q)
+		w_max = get_max(mmq)
+		w_min = get_min(mmq)
 
 		denominator = w_max - w_min
 
@@ -43,15 +33,12 @@ end
 		end
 	end
 
-    @inbounds for i in (period+1):n
-		remove_old!(max_q, i - period)
-		remove_old!(min_q, i - period)
+    @inbounds for i in (period+1):len
+		remove_old!(mmq, i - period)
+		update!(mmq, rsi[i], rsi[i], i)
 
-		push_back!(max_q, rsi[i], i)
-		push_back_min!(min_q, rsi[i], i)
-
-		w_max = get_extreme(max_q)
-		w_min = get_extreme(min_q)
+		w_max = get_max(mmq)
+		w_min = get_min(mmq)
 
 		denominator = w_max - w_min
 
@@ -64,25 +51,39 @@ end
 
     # Apply smoothing to get Stochastic %K
     if ma_type == :SMA
-        stoch_k = SMA(raw_k, k_smooth)
+        stoch_k = SMA(raw_k; n=k_smooth)
     elseif ma_type == :EMA
-        stoch_k = EMA(raw_k, k_smooth)
+        stoch_k = EMA(raw_k; n=k_smooth)
     elseif ma_type == :SMMA || ma_type == :RMA
-        stoch_k = SMMA(raw_k, k_smooth)
+        stoch_k = SMMA(raw_k; n=k_smooth)
+    elseif ma_type == :WMA
+        stoch_k = WMA(raw_k; n=k_smooth)
     else
-        throw(ArgumentError("ma_type must be one of: :SMA, :EMA, :SMMA"))
+        throw(ArgumentError("ma_type must be one of: :SMA, :EMA, :SMMA, :WMA"))
     end
 
     # Calculate %D by smoothing %K
     if ma_type == :SMA
-        stoch_d = SMA(stoch_k, d_smooth)
+        stoch_d = SMA(stoch_k; n=d_smooth)
     elseif ma_type == :EMA
-        stoch_d = EMA(stoch_k, d_smooth)
+        stoch_d = EMA(stoch_k; n=d_smooth)
     elseif ma_type == :SMMA || ma_type == :RMA
-        stoch_d = SMMA(stoch_k, d_smooth)
+        stoch_d = SMMA(stoch_k; n=d_smooth)
+    elseif ma_type == :WMA
+        stoch_d = WMA(stoch_k; n=d_smooth)
+    else
+        throw(ArgumentError("ma_type must be one of: :SMA, :EMA, :SMMA, :WMA"))
     end
 
     return hcat(stoch_k, stoch_d)
 end
 
-export StochRSI
+@prep_simo StochRSI [K, D] n=14 ma_type=SMA k_smooth=3 d_smooth=3
+
+# function StochRSI(ts::TSFrame, period::Int=14; field::Symbol=:Close, ma_type::Symbol=:SMA)
+#     prices = ts[:,field]
+#     results = StochRSI(prices, period; ma_type=ma_type)
+#     colnames = [:StochRSI_K, :StochRSI_D]
+#     return TSFrame(results, index(ts), colnames=colnames)
+# end
+# export StochRSI

@@ -44,4 +44,4 @@
     return adl
 end
 
-@prep_miso ADL [:High, :Low, :Close, :Volume]
+@prep_miso ADL [High, Low, Close, Volume]

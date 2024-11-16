@@ -87,7 +87,7 @@ end
 macro prep_miso(name, in, args...)
     fields = if in.head == :vect
         # [x for x in in.args]
-        Expr(:vect, [x for x in in.args]...)
+        Expr(:vect, [QuoteNode(x) for x in in.args]...)
     else
         error("Second argument must be a vector of field names")
     end
@@ -108,6 +108,26 @@ macro prep_miso(name, in, args...)
     end
 end
 
+macro prep_simo(name, out, args...)
+    colvec = if out.head == :vect
+        Expr(:vect, [QuoteNode(Symbol(name, :_, x)) for x in out.args]...)
+    else
+        error("Second argument must be a vector of field names")
+    end
+
+    params, kw_args, call_args = process_args(args)
+    haskey(params, :field) || push!(kw_args, Expr(:kw, Expr(:(::), esc(:field), Symbol), :(:Close)))
+
+
+    return quote
+        function $(esc(name))(ts::TSFrame; $(kw_args...))
+            prices = ts[:, field]
+            results = $(esc(name))(prices; $(call_args...))
+            return TSFrame(results, index(ts), colnames=$colvec)
+        end
+        export $(esc(name))
+    end
+end
 
 
 """

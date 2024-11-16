@@ -19,22 +19,14 @@ Parameters:
 
 Returns a TSFrame with columns [:BB_Center, :BB_Upper, :BB_Lower]
 """
-function BB(ts::TSFrame, period::Int = 14; field::Symbol = :Close, num_std = 2, ma_type::Symbol = :SMA)
-	prices = ts[:, field]
-    results = BB(prices, period; num_std = num_std, ma_type = ma_type)
-	colnames = [:BB_Center, :BB_Upper, :BB_Lower]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-export BB
-
-function BB(prices::Vector{T}, period::Int = 14; num_std::Int = 2, ma_type::Symbol = :SMA) where T
+function BB(prices::Vector{T}, period::Int = 14; num_std::Float64 = 2.0, ma_type::Symbol = :SMA) where T
     results = zeros(T, (length(prices),3))
     if ma_type == :SMMA
-        masd = SMMA_stats(prices, period)
+        masd = SMMA_stats(prices; n=period)
     elseif ma_type == :EMA
-        masd = EMA_stats(prices, period)
+        masd = EMA_stats(prices; n=period)
     else
-        masd = SMA_stats(prices, period)
+        masd = SMA_stats(prices; n=period)
     end
     @inbounds for (i, price) in enumerate(prices)
         results[i,1] = masd[i,1]
@@ -48,3 +40,13 @@ function BB(prices::Vector{T}, period::Int = 14; num_std::Int = 2, ma_type::Symb
     # end
     return results
 end
+
+@prep_simo BB [Center, Upper, Lower] num_std=2.0 ma_type=SMA
+
+# function BB(ts::TSFrame, period::Int = 14; field::Symbol = :Close, num_std = 2, ma_type::Symbol = :SMA)
+# 	prices = ts[:, field]
+#     results = BB(prices, period; num_std = num_std, ma_type = ma_type)
+# 	colnames = [:BB_Center, :BB_Upper, :BB_Lower]
+# 	return TSFrame(results, index(ts), colnames = colnames)
+# end
+# export BB

@@ -14,4 +14,4 @@
     return ema_fast - ema_slow
 end
 
-@prep_miso ChaikinOsc [:High, :Low, :Close, :Volume] fast=3 slow=10
+@prep_miso ChaikinOsc [High, Low, Close, Volume] fast=3 slow=10
