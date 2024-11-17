@@ -4,6 +4,7 @@ using Test, CSV, TSFrames
 tests = [
     "CircBuff",
     "CircDeque",
+    "MinMaxQueue",
     "Indicators"
 ]
 

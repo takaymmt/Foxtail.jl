@@ -3,9 +3,10 @@ module Foxtail
 using TSFrames, LinearAlgebra
 
 export
-	CircBuff, CircDeque,
+	CircBuff, CircDeque, MinMaxQueue,
 	# functions
-	isfull, capacity, value, merge_in!
+	isfull, capacity, value, merge_in!,
+	update!, remove_old!, get_max, get_min
 
 include("tools/CircBuff.jl")
 include("tools/CircDeque.jl")
