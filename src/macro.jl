@@ -1,41 +1,58 @@
 """
-    @prep_SISO(indicator, params)
+    process_args(args)
 
-## Overview
-The `@prep_SISO` macro is designed to automatically generate interface functions for technical analysis indicators that operate on time series data. It creates a wrapper function that handles data extraction from a TSFrame object and passes it to the actual computation function.
+Process macro arguments to generate keyword and call arguments for technical indicator wrapper functions.
 
-## Purpose
-- Reduces boilerplate code when implementing technical indicators
-- Provides a consistent interface for working with TSFrame objects
-- Handles parameter passing and type checking
-- Manages column naming for output results
+# Arguments
+- `args`: Tuple of expressions representing macro arguments, accepting both direct assignments and named tuples
 
-## Usage
+# Returns
+A tuple of three elements:
+- `params`: Dictionary mapping parameter names to their values
+- `kw_args`: Vector of expressions for keyword arguments with type annotations
+- `call_args`: Vector of expressions for function call arguments
+
+# Input Formats
+1. Direct assignment:
 ```julia
-@prep_SISO IndicatorName [(parameter1=value1, parameter2=value2...)]
+@prep_siso RSI n=14 field=:Close
 ```
 
-### Examples:
+2. Named tuple format:
 ```julia
-@prep_SISO Ind1                                 # Basic usage with defaults
-@prep_SISO Ind2 (a=0.7)                         # Single parameter
-@prep_SISO Ind3 (offset=0.85, sigma=6)          # Multiple parameters
-@prep_SISO Ind4 (field=Volume)                  # Custom input field
-@prep_SISO Ind5 (field=Volume, beta=5.0)        # Field and parameter
+@prep_siso RSI (n=14, field=:Close)
 ```
 
-## Generated Function Structure
-For each macro invocation, it generates a function with the following signature:
+# Implementation Details
+1. Parses arguments into a parameter dictionary:
+   - Handles direct assignments (key=value)
+   - Processes tuple-formatted parameters ((key1=value1, key2=value2))
+
+2. Generates two types of argument expressions:
+   - Keyword arguments with type annotations for function signatures
+   - Call arguments for passing parameters to the underlying function
+
+# Special Handling
+- Symbol values are wrapped in QuoteNode
+- The 'field' parameter is excluded from call arguments
+- All parameters are properly escaped for macro hygiene
+
+# Examples
 ```julia
-function IndicatorName(ts::TSFrame, period::Int=10; field::Symbol=:Close, ...additional_params)
-    prices = ts[:, field]                    # Extract data from specified field
-    results = IndicatorName(prices, period)  # Call actual computation function
-    col_name = Symbol(IndicatorName, :_, period)
-    return TSFrame(results, index(ts), colnames=[col_name])
-end
+# Input (Direct): n=20, field=:Close
+# Input (Tuple): (n=20, field=:Close)
+# Output for both:
+# params: Dict(:n => 20, :field => :Close)
+# kw_args: [:(n::Int = 20), :(field::Symbol = :Close)]
+# call_args: [:(n = n)]
 ```
+
+# Notes
+- Used internally by technical indicator wrapper macros
+- Ensures consistent parameter handling across different indicator types
+- Maintains proper type information in generated functions
+- Handles macro hygiene requirements
 """
-
 function process_args(args)
     params = Dict{Any,Any}()
     kw_args = Expr[]
@@ -68,6 +85,61 @@ function process_args(args)
     return params, kw_args, call_args
 end
 
+"""
+    @prep_siso(indicator[, params...])
+
+Automatically generates a wrapper function for Single Input Single Output (SISO) technical indicators.
+
+# Arguments
+- `indicator`: Name of the technical indicator function (Symbol)
+- `params`: Optional parameters (in keyword argument format)
+
+# Generated Function Signature
+```julia
+function indicator(ts::TSFrame; field::Symbol=:Close, params...)
+    prices = ts[:, field]
+    results = indicator(prices; params...)
+    return TSFrame(results, index(ts), colnames=[indicator])
+end
+```
+
+# Parameter Specification
+- `field`: Column name to use as input data (default: `:Close`)
+- `n`: Period parameter (when specified, column name becomes `Symbol(indicator, "_", n)`)
+- All other parameters are passed directly to the indicator function
+
+# Examples
+```julia
+# Basic usage
+@prep_siso RSI
+
+# With period parameter
+@prep_siso EMA (n=20)
+
+# Specifying input field and parameter
+@prep_siso SMA (field=:Volume, n=10)
+
+# Multiple parameters
+@prep_siso KAMA (n=10, fast=2, slow=30)
+```
+
+# Notes
+- Generated functions are automatically exported
+- The indicator function must take a single time series as input and return a single time series
+- Parameters must be specified in tuple format: `(param1=value1, param2=value2)`
+- The macro handles TSFrame data extraction and result wrapping
+
+# Features
+- Automatic type checking for parameters
+- Consistent interface across different indicators
+- Proper column naming for output results
+- Automatic data extraction from TSFrame objects
+
+# See Also
+- [`@prep_miso`](@ref): For Multiple Input Single Output indicators
+- [`@prep_simo`](@ref): For Single Input Multiple Output indicators
+- [`@prep_mimo`](@ref): For Multiple Input Multiple Output indicators
+"""
 macro prep_siso(name, args...)
     typeof(name) == Symbol || error("First argument must be a function name")
 
@@ -86,6 +158,59 @@ macro prep_siso(name, args...)
     end
 end
 
+"""
+    @prep_miso(indicator, input_fields[, params...])
+
+Automatically generates a wrapper function for Multiple Input Single Output (MISO) technical indicators.
+
+# Arguments
+- `indicator`: Name of the technical indicator function (Symbol)
+- `input_fields`: Vector of field names to use as input (e.g., `[:High, :Low, :Close]`)
+- `params`: Optional parameters (in keyword argument format)
+
+# Generated Function Signature
+```julia
+function indicator(ts::TSFrame; fields::Vector{Symbol}=input_fields, params...)
+    prices = ts[:, fields] |> Matrix
+    results = indicator(prices; params...)
+    return TSFrame(results, index(ts), colnames=[indicator])
+end
+```
+
+# Parameter Specification
+- `fields`: Vector of column names to use as input data (specified in input_fields)
+- `n`: Period parameter (when specified, column name becomes `Symbol(indicator, "_", n)`)
+- All other parameters are passed directly to the indicator function
+
+# Examples
+```julia
+# Basic usage with required fields
+@prep_miso ATR [:High, :Low, :Close]
+
+# With period parameter
+@prep_miso ATR [:High, :Low, :Close] (n=14)
+
+# With additional parameters
+@prep_miso ChaikinOsc [:High, :Low, :Close, :Volume] (fast=3, slow=10)
+```
+
+# Notes
+- Generated functions are automatically exported
+- The indicator function must take a matrix of time series as input and return a single time series
+- Parameters must be specified in tuple format: `(param1=value1, param2=value2)`
+- Input fields are converted to a matrix before being passed to the indicator function
+
+# Features
+- Automatic matrix conversion of input data
+- Consistent interface for multi-input indicators
+- Proper column naming for output results
+- Type checking for input parameters
+
+# See Also
+- [`@prep_siso`](@ref): For Single Input Single Output indicators
+- [`@prep_simo`](@ref): For Single Input Multiple Output indicators
+- [`@prep_mimo`](@ref): For Multiple Input Multiple Output indicators
+"""
 macro prep_miso(name, in, args...)
     typeof(name) == Symbol || error("First argument must be a function name")
 
@@ -111,6 +236,59 @@ macro prep_miso(name, in, args...)
     end
 end
 
+"""
+    @prep_simo(indicator, output_suffixes[, params...])
+
+Automatically generates a wrapper function for Single Input Multiple Output (SIMO) technical indicators.
+
+# Arguments
+- `indicator`: Name of the technical indicator function (Symbol)
+- `output_suffixes`: Vector of suffixes for output column names (e.g., `[:Upper, :Lower, :Middle]`)
+- `params`: Optional parameters (in keyword argument format)
+
+# Generated Function Signature
+```julia
+function indicator(ts::TSFrame; field::Symbol=:Close, params...)
+    prices = ts[:, field]
+    results = indicator(prices; params...)
+    return TSFrame(results, index(ts), colnames=[Symbol(indicator, "_", suffix) for suffix in output_suffixes])
+end
+```
+
+# Parameter Specification
+- `field`: Column name to use as input data (default: `:Close`)
+- Output column names are automatically generated as `Symbol(indicator, "_", suffix)`
+- All other parameters are passed directly to the indicator function
+
+# Examples
+```julia
+# Basic usage for Bollinger Bands
+@prep_simo BB [:Upper, :Middle, :Lower] (n=20)
+
+# MACD with custom parameters
+@prep_simo MACD [:Line, :Signal, :Histogram] (fast=12, slow=26, signal=9)
+
+# StochRSI with default parameters
+@prep_simo StochRSI [:K, :D]
+```
+
+# Notes
+- Generated functions are automatically exported
+- The indicator function must take a single time series as input and return multiple output series
+- Output column names are automatically prefixed with the indicator name
+- Results must match the number of specified output suffixes
+
+# Features
+- Automatic column naming with indicator prefix
+- Consistent interface for multi-output indicators
+- Single input field handling
+- Type checking for parameters
+
+# See Also
+- [`@prep_siso`](@ref): For Single Input Single Output indicators
+- [`@prep_miso`](@ref): For Multiple Input Single Output indicators
+- [`@prep_mimo`](@ref): For Multiple Input Multiple Output indicators
+"""
 macro prep_simo(name, out, args...)
     typeof(name) == Symbol || error("First argument must be a function name")
 
