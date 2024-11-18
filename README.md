@@ -33,7 +33,7 @@ ema = EMA(ts, 50)
 -   StochasticRSI
 -   Williams %R
 
-ToDos
+ToDos (not implemented yet)
 
 -   DMI (Directional Movement Index) / ADX ★★★
 -   CCI (Commodity Channel Index) ★★★
@@ -51,7 +51,7 @@ ToDos
 -   Chaikin Oscillator
 -   OBV (On Balance Volume)
 
-ToDos
+ToDos (not implemented yet)
 
 -   VWAP (Volume Weighted Average Price) ★★★
 -   Force Index ★★
@@ -64,7 +64,7 @@ ToDos
 -   ATR (Average True Range)
 -   Bollinger Bands
 
-ToDos
+ToDos (not implemented yet)
 
 -   Keltner Channel ★★★
 -   Donchian Channel ★★★
@@ -73,7 +73,7 @@ ToDos
 
 ### Trending Indicators
 
-ToDos
+ToDos (not implemented yet)
 
 -   Ichimoku Cloud ★★★
 -   Parabolic SAR ★★★
