@@ -1,5 +1,5 @@
 """
-    EMA(data::Vector{T}, period::Int) where T
+    EMA(data::Vector{T}; n::Int=10) where T
 
 Calculate Exponential Moving Average (EMA) for a given time series data.
 
@@ -9,7 +9,7 @@ dynamic smoothing factor for the initial period and a fixed smoothing factor aft
 
 # Arguments
 - `data::Vector{T}`: Input price vector of any numeric type
-- `period::Int`: Length of the initialization period and smoothing factor calculation
+- `n::Int=10`: Length of the initialization period and smoothing factor calculation (default: 10)
 
 # Returns
 - `Vector{T}`: Vector containing EMA values for each point in the input data
@@ -17,8 +17,8 @@ dynamic smoothing factor for the initial period and a fixed smoothing factor aft
 # Implementation Details
 The function uses different smoothing approaches based on the position in the series:
 - First point: Uses the actual price as initial EMA
-- During initialization (i ≤ period): Uses dynamic smoothing factor α = 2/(1+i)
-- After initialization (i > period): Uses fixed smoothing factor α = 2/(1+period)
+- During initialization (i ≤ n): Uses dynamic smoothing factor α = 2/(1+i)
+- After initialization (i > n): Uses fixed smoothing factor α = 2/(1+n)
 
 The EMA is calculated using the formula:
     EMA_t = Price_t * α + EMA_(t-1) * (1-α)
@@ -27,8 +27,7 @@ where α is the smoothing factor
 # Example
 ```julia
 prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-period = 4
-result = EMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 3.8, 4.68, 5.6, 6.57, 7.54, 8.52]
+result = EMA(prices, n=4)  # Returns: [1.0, 1.67, 2.33, 3.0, 3.8, 4.68, 5.6, 6.57, 7.54, 8.52]
 ```
 """
 @inline Base.@propagate_inbounds function EMA(data::Vector{T}; n::Int=10) where T
@@ -56,14 +55,14 @@ end
 @prep_siso EMA n=10
 
 """
-    EMA_stats(data::Vector{T}, period::Int) where T
+    EMA_stats(data::Vector{T}; n::Int=10) where T
 
 Calculate Exponential Moving Average (EMA) and its standard deviation using the recursive method
 described in "Incremental calculation of weighted mean and variance" (Tony Finch, 2009).
 
 # Arguments
 - `data::Vector{T}`: Input price vector of any numeric type
-- `period::Int`: Length for calculating the smoothing factor
+- `n::Int=10`: Length for calculating the smoothing factor (default: 10)
 
 # Returns
 - `Matrix{T}`: A matrix where:
@@ -73,11 +72,14 @@ described in "Incremental calculation of weighted mean and variance" (Tony Finch
 # Implementation Details
 Uses different smoothing factors based on the position:
 - First point: Uses actual price as initial EMA
-- During initialization (i ≤ period): Uses dynamic α = 2/(1+i)
-- After initialization (i > period): Uses fixed α = 2/(1+period)
+- During initialization (i ≤ n): Uses dynamic α = 2/(1+i)
+- After initialization (i > n): Uses fixed α = 2/(1+n)
 
 Variance is updated using the recursive formula:
 var[t] = (1 - α) * (var[t-1] + α * (x[t] - mean[t-1])²)
+
+# Reference
+- "Incremental calculation of weighted mean and variance" written by Tony Finch, Feb 2009
 """
 @inline Base.@propagate_inbounds function EMA_stats(data::Vector{T}; n::Int=10) where T
     period = n

@@ -51,6 +51,42 @@ end
 
 @prep_siso SMA n=14
 
+"""
+    SMA_stats(prices::Vector{T}; n::Int=14) where T
+
+Calculate Simple Moving Average (SMA) and Standard Deviation for a given time series data.
+
+# Arguments
+- `prices::Vector{T}`: Input price vector of any numeric type
+- `n::Int=14`: Length of the moving window for calculations
+
+# Returns
+- `Matrix{T}`: A matrix of size (length(prices), 2) where:
+  - Column 1: SMA values
+  - Column 2: Standard deviation values
+
+# Implementation Details
+Uses a circular buffer for efficient memory management and maintains running sums for
+both prices and squared prices to optimize performance:
+- For full buffer (i > n): Updates running sums by removing oldest values and adding new ones
+- For partial buffer (i ≤ n): Accumulates sums and computes statistics using current buffer length
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+sma_std = SMA_stats(prices; n=4)
+# sma_std[:,1] contains SMA values
+# sma_std[:,2] contains standard deviation values
+```
+
+# Mathematical Details
+Standard deviation is calculated using an online algorithm that maintains running sums:
+- Running sum (S₁) = Σxᵢ
+- Running sum of squares (S₂) = Σxᵢ²
+- Mean (μ) = S₁/n
+- Variance (σ²) = S₂/n - μ²
+- Standard deviation (σ) = √(max(0, σ²))
+"""
 @inline Base.@propagate_inbounds function SMA_stats(prices::Vector{T}; n::Int=14) where T
     period = n
     buf = CircBuff{T}(period)

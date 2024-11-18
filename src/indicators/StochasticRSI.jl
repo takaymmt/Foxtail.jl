@@ -1,3 +1,35 @@
+"""
+    StochRSI(prices::Vector{Float64}; n::Int=14, k_smooth::Int=3, d_smooth::Int=3, ma_type::Symbol=:SMA)
+
+Calculates the Stochastic RSI (StochRSI) indicator, which combines the Relative Strength Index (RSI) with the Stochastic oscillator.
+
+# Arguments
+- `prices::Vector{Float64}`: Vector of price data
+- `n::Int=14`: Period for RSI calculation and stochastic window
+- `k_smooth::Int=3`: Smoothing period for %K line
+- `d_smooth::Int=3`: Smoothing period for %D line (signal line)
+- `ma_type::Symbol=:SMA`: Type of moving average to use. Options: `:SMA`, `:EMA`, `:SMMA`/`:RMA`, `:WMA`
+
+# Returns
+- `Matrix{Float64}`: A matrix with two columns:
+  - Column 1: Stochastic RSI %K line (smoothed)
+  - Column 2: Stochastic RSI %D line (signal line)
+
+# Notes
+- The StochRSI applies the stochastic formula to RSI values instead of price data
+- Values are normalized between 0 and 100
+- Default to 50 when the RSI range is zero to avoid division by zero
+- Requires at least `2n` data points due to both RSI and Stochastic calculations
+
+# Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+result = StochRSI(prices)
+result = StochRSI(prices; n=4, k_smooth=2, d_smooth=2, ma_type=:SMA)
+# result[:,1] contains StochRSI %K line
+# result[:,2] contains StochRSI %D line
+```
+"""
 @inline Base.@propagate_inbounds function StochRSI(prices::Vector{Float64}; n::Int=14, k_smooth::Int=3, d_smooth::Int=3, ma_type::Symbol=:SMA)
     period = n
     if period < 1 || k_smooth < 1 || d_smooth < 1
@@ -79,11 +111,3 @@
 end
 
 @prep_simo StochRSI [K, D] n=14 ma_type=SMA k_smooth=3 d_smooth=3
-
-# function StochRSI(ts::TSFrame, period::Int=14; field::Symbol=:Close, ma_type::Symbol=:SMA)
-#     prices = ts[:,field]
-#     results = StochRSI(prices, period; ma_type=ma_type)
-#     colnames = [:StochRSI_K, :StochRSI_D]
-#     return TSFrame(results, index(ts), colnames=colnames)
-# end
-# export StochRSI

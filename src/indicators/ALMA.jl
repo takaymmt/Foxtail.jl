@@ -1,37 +1,42 @@
 """
-Arnaud Legoux Moving Average (ALMA) Implementation
+    ALMA(prices::Vector; n::Int=10, offset::Float64=0.85, sigma::Float64=6.0) -> Vector{Float64}
 
-ALMA is an advanced moving average indicator that reduces signal lag while maintaining
-smooth transitions between values. It uses Gaussian-weighted coefficients applied to price data.
+Arnaud Legoux Moving Average (ALMA) - A weighted moving average that reduces lag while maintaining smoothness.
 
-Basic Concept:
--------------
-ALMA is calculated as a weighted sum of price values, where the weights follow
-a Gaussian (bell curve) distribution shape. The weights are positioned and scaled
-within the window using the offset and sigma parameters.
+# Arguments
+- `prices::Vector`: Input price series
+- `n::Int=10`: Window size/period length
+- `offset::Float64=0.85`: Controls weight distribution (0 to 1). Higher values emphasize recent prices
+- `sigma::Float64=6.0`: Controls Gaussian curve width. Lower values create sharper curves
 
-Core Formula:
-------------
-ALMA_t = Σ(w_i * P_(t-i))  for i = 0 to (n-1)
+# Returns
+- `Vector{Float64}`: ALMA values for the input series
 
+# Details
+ALMA uses Gaussian-weighted coefficients to calculate a moving average with reduced lag.
+The weights follow a bell curve distribution shaped by the offset and sigma parameters.
+
+# Formula
+```math
+ALMA_t = \\sum_{i=0}^{n-1} w_i \\cdot P_{t-i}
+```
 where:
-- w_i are the normalized Gaussian weights
-- P_(t-i) is the price i periods ago
-- n is the window size
+- ``w_i`` are normalized Gaussian weights
+- ``P_{t-i}`` is the price i periods ago
+- ``n`` is the window size
 
-Weight Calculation:
------------------
-1. Initial weight for position i:
-   w_i = exp(-(i - m)^2 / (2 * s^2))
-   where:
-   - m = floor(offset * (n-1)) : controls the peak position
-   - s = n/sigma : controls the curve width
+# Weight Calculation
+1. ``w_i = exp(-(i - m)^2 / (2s^2))``
+   - ``m = offset \\cdot (n-1)``
+   - ``s = n/sigma``
+2. Weights are normalized: ``w_i = w_i / \\sum w_j``
 
-2. Weights are then normalized by dividing each by their sum:
-   final_w_i = w_i / Σ(w_j)  for j = 0 to (n-1)
+# Parameter Guidelines
+- Short-term:  n=9,  offset=0.85, sigma=6
+- Medium-term: n=21, offset=0.85, sigma=6
+- Long-term:   n=50, offset=0.85, sigma=6
 
-Parameters:
-----------
+## Parameters Details
 window (n): Integer, default=9
     - Number of periods to consider
     - Larger values capture longer trends but increase lag
@@ -48,27 +53,8 @@ sigma: Float64, default=6.0
     - Lower values (e.g., 2) create sharper curves = more responsive but noisier
     - Higher values (e.g., 6) create gentler curves = smoother but more lag
     - 6.0 provides good balance between smoothing and responsiveness
-
-Effect of Parameters:
--------------------
-Window Size Effect:
-- Larger window → Smoother output, more lag, better for long-term trends
-- Smaller window → More responsive, less lag, better for short-term signals
-
-Offset Effect:
-- Higher offset → More weight on recent prices, faster response to changes
-- Lower offset → More weight on older prices, slower response to changes
-
-Sigma Effect:
-- Lower sigma → Sharper weight distribution, more emphasis on prices near peak
-- Higher sigma → Broader weight distribution, more evenly distributed weights
-
-Common Parameter Combinations:
----------------------------
-Short-term trading:  window=9,  offset=0.85, sigma=6
-Medium-term trading: window=21, offset=0.85, sigma=6
-Long-term trading:   window=50, offset=0.85, sigma=6
 """
+
 @inline Base.@propagate_inbounds function ALMA(prices::Vector; n::Int=10, offset::Float64=0.85, sigma::Float64=6.0)
 	period = n
 	len = length(prices)

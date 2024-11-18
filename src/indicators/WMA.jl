@@ -1,39 +1,30 @@
 """
-    WMA(data::Vector{T}, period::Int) where T
+    WMA(data::Vector{T}; n::Int=10) where T
 
 Calculate Weighted Moving Average (WMA) for a given time series data.
 
-Weighted Moving Average assigns linearly increasing weights to more recent prices
-while considering historical data. This implementation uses a circular buffer for
-efficient memory management and optimizes calculations by maintaining running sums.
-
 # Arguments
 - `data::Vector{T}`: Input price vector of any numeric type
-- `period::Int`: Length of the moving window for weighted average calculation
+- `n::Int=10`: Length of the moving window (default: 10)
 
 # Returns
 - `Vector{T}`: Vector containing WMA values for each point in the input data
 
-# Implementation Details
-The function uses different calculation approaches based on the buffer state:
-- During initialization (i ≤ period):
-  * Weight for position i is i
-  * Denominator is calculated as i(i+1)/2
-  * Maintains running sum of weighted prices
-- After initialization (i > period):
-  * Uses circular buffer to update running sums efficiently
-  * Updates numerator by adding new weighted price and removing oldest values
-  * Denominator remains constant at period(period+1)/2
+# Algorithm
+Uses a weighted sum where recent values have higher weights:
+- For position i ≤ n: weights increase linearly from 1 to i
+- For position i > n: weights increase linearly from 1 to n
+- Denominator is calculated as n(n+1)/2 for full window
+- Uses circular buffer for efficient memory management
 
-The WMA is calculated using the formula:
-    WMA = Σ(weight_i * price_i) / Σ(weight_i)
+# Formula
+WMA = Σ(weight_i * price_i) / Σ(weight_i)
 where weight_i increases linearly with recency
 
 # Example
 ```julia
-prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-period = 4
-result = WMA(prices, period)  # Returns: [1.0, 1.67, 2.33, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+prices = [1.0, 2.0, 3.0, 4.0, 5.0]
+wma = WMA(prices, n=3)  # Returns weighted moving averages
 ```
 """
 @inline Base.@propagate_inbounds function WMA(data::Vector{T}; n::Int=10) where T

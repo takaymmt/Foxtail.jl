@@ -312,6 +312,57 @@ macro prep_simo(name, out, args...)
     end
 end
 
+"""
+    @prep_mimo(indicator, input_fields, output_suffixes[, params...])
+
+Automatically generates a wrapper function for Multiple Input Multiple Output (MIMO) technical indicators.
+
+# Arguments
+- `indicator`: Name of the technical indicator function (Symbol)
+- `input_fields`: Vector of field names to use as input (e.g., `[:High, :Low, :Close]`)
+- `output_suffixes`: Vector of suffixes for output column names (e.g., `[:Upper, :Lower]`)
+- `params`: Optional parameters (in keyword argument format)
+
+# Generated Function Signature
+```julia
+function indicator(ts::TSFrame; fields::Vector{Symbol}=input_fields, params...)
+    prices = ts[:, fields] |> Matrix
+    results = indicator(prices; params...)
+    return TSFrame(results, index(ts), colnames=[Symbol(indicator, "_", suffix) for suffix in output_suffixes])
+end
+```
+
+# Parameter Specification
+- `fields`: Vector of column names to use as input data (specified in input_fields)
+- Output column names are automatically generated as `Symbol(indicator, "_", suffix)`
+- All other parameters are passed directly to the indicator function
+
+# Examples
+```julia
+# Basic usage with multiple inputs and outputs
+@prep_mimo Stochastic [:High, :Low, :Close] [:K, :D] (n=14, k=3, d=3)
+
+# Complex indicator with multiple parameters
+@prep_mimo CustomIndicator [:Open, :High, :Low, :Close] [:Signal1, :Signal2] (fast=12, slow=26)
+```
+
+# Notes
+- Generated functions are automatically exported
+- The indicator function must take a matrix of time series as input and return multiple output series
+- Output column names are automatically prefixed with the indicator name
+- Results must match the number of specified output suffixes
+
+# Features
+- Handles multiple input fields with matrix conversion
+- Automatic column naming for multiple outputs
+- Consistent interface for complex indicators
+- Type checking for input parameters
+
+# See Also
+- [`@prep_siso`](@ref): For Single Input Single Output indicators
+- [`@prep_miso`](@ref): For Multiple Input Single Output indicators
+- [`@prep_simo`](@ref): For Single Input Multiple Output indicators
+"""
 macro prep_mimo(name, in, out, args...)
     typeof(name) == Symbol || error("First argument must be a function name")
 
@@ -341,68 +392,3 @@ macro prep_mimo(name, in, out, args...)
         export $(esc(name))
     end
 end
-
-
-"""
-# SIMO ------------------------------------------------------------------------
-
-function BB(ts::TSFrame, period::Int = 14; field::Symbol = :Close, num_std = 2, ma_type::Symbol = :SMA)
-	prices = ts[:, field]
-    results = BB(prices, period; num_std = num_std, ma_type = ma_type)
-	colnames = [:BB_Center, :BB_Upper, :BB_Lower]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-
-function MACD(ts::TSFrame; field::Symbol = :Close, fast::Int = 12, slow::Int = 26, signal::Int = 9)
-	prices = ts[:, field]
-	results = MACD(prices, fast, slow, signal)
-	colnames = [:MACD_Line, :MACD_Signal, :MACD_Histogram]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-
-function StochRSI(ts::TSFrame, period::Int=14; field::Symbol=:Close, ma_type::Symbol=:SMA)
-    prices = ts[:,field]
-    results = StochRSI(prices, period; ma_type=ma_type)
-    colnames = [:StochRSI_K, :StochRSI_D]
-    return TSFrame(results, index(ts), colnames=colnames)
-end
-
-# MISO ------------------------------------------------------------------------
-
-function ADL(ts::TSFrame; field::Vector{Symbol} = [:High, :Low, :Close, :Volume])
-	prices = ts[:, field] |> Matrix
-	results = ADL(prices)
-	colnames = [:ADL]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-
-function ATR(ts::TSFrame, period::Int=14; field::Vector{Symbol}=[:High, :Low, :Close], ma_type::Symbol=:EMA)
-    prices = ts[:,field] |> Matrix
-    results = ATR(prices; period=period, ma_type=ma_type)
-    col_name = :ATR
-    return TSFrame(results, index(ts), colnames=[col_name])
-end
-
-function ChaikinOsc(ts::TSFrame; field::Vector{Symbol} = [:High, :Low, :Close, :Volume], fast::Int = 3, slow::Int = 10)
-	prices = ts[:, field] |> Matrix
-	results = ChaikinOsc(prices; fast = fast, slow = slow)
-	colnames = [:ChaikinOsc]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-
-# MIMO ------------------------------------------------------------------------
-
-function Stoch(ts::TSFrame, period::Int = 14; field::Vector{Symbol} = [:High, :Low, :Close], ma_type::Symbol = :SMA)
-	prices = ts[:, field] |> Matrix
-	results = Stoch(prices, period; ma_type = ma_type)
-	colnames = [:Stoch_K, :Stoch_D]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-
-function WR(ts::TSFrame, period::Int=14; field::Vector{Symbol} = [:High, :Low, :Close])
-	prices = ts[:, field] |> Matrix
-	results = WR(prices, period)
-	colnames = [:WR, :WR_EMA]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-"""

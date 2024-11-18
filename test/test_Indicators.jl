@@ -3,7 +3,7 @@
     data_ts = aapl[end-100:end]
 
     @testset "Indicators SISO" begin
-        data_vec = collect(1.0:30.0)
+        data_vec = collect(1.0:50.0)
 
         @testset "ALMA" begin
             @test ALMA(data_vec) isa Vector{Float64}
@@ -143,6 +143,7 @@
     end
 
     @testset "Indicators MISO" begin
+        vec2 = rand(100,2) * 100
         vec3 = rand(100,3) * 100
         vec4 = rand(100,4) * 100
 
@@ -171,16 +172,23 @@
             @test co isa TSFrame
             @test names(co)[1] == "ChaikinOsc"
         end
+
+        @testset "OBV" begin
+            @test OBV(vec2) isa Vector{Float64}
+            res = OBV(data_ts)
+            @test res isa TSFrame
+            @test names(res)[1] == "OBV"
+        end
     end
 
     @testset "Indicators SIMO" begin
-        data_vec = collect(1.0:30.0)
+        data_vec = collect(1.0:50.0)
 
         @testset "BollingerBands" begin
             @test BB(data_vec) isa Matrix{Float64}
-            @test BB(data_vec; num_std=3.0) isa Matrix{Float64}
+            @test BB(data_vec; n=25, num_std=3.0) isa Matrix{Float64}
             @test BB(data_ts) isa TSFrame
-            @test BB(data_ts; num_std=3.0) isa TSFrame
+            @test BB(data_ts; n=25, num_std=3.0) isa TSFrame
             @test BB(data_ts; ma_type=:EMA) isa TSFrame
             @test BB(data_ts; ma_type=:SMMA) isa TSFrame
             ind = BB(data_ts)
@@ -198,6 +206,18 @@
             @test names(ind)[3] == "MACD_Histogram"
         end
 
+        @testset "MACD3" begin
+            @test MACD3(data_vec) isa Matrix{Float64}
+            ind = MACD3(data_ts)
+            @test ind isa TSFrame
+            @test names(ind)[1] == "MACD3_Fast"
+            @test names(ind)[2] == "MACD3_Middle"
+            @test names(ind)[3] == "MACD3_Slow"
+            @test MACD3(data_ts; ma_type=:HAJ, fast=10, middle=30, slow=50) isa TSFrame
+            @test MACD3(data_ts; ma_type=:KAMA, fast=10, middle=30, slow=50) isa TSFrame
+            @test MACD3(data_ts; ma_type=:ALMA, fast=10, middle=30, slow=50) isa TSFrame
+        end
+
         @testset "Stochastic RSI" begin
             @test StochRSI(data_vec) isa Matrix{Float64}
             @test StochRSI(data_ts) isa TSFrame
@@ -208,6 +228,30 @@
             ind = StochRSI(data_ts)
             @test names(ind)[1] == "StochRSI_K"
             @test names(ind)[2] == "StochRSI_D"
+        end
+    end
+
+    @testset "Indicators MIMO" begin
+        vec3 = rand(100,3) * 100
+
+        @testset "Stochastic" begin
+            @test Stoch(vec3) isa Matrix{Float64}
+            res = Stoch(data_ts)
+            @test res isa TSFrame
+            @test names(res)[1] == "Stoch_K"
+            @test names(res)[2] == "Stoch_D"
+            @test Stoch(data_ts; n=25, k_smooth=4, d_smooth=5) isa TSFrame
+            @test Stoch(data_ts; ma_type=:EMA) isa TSFrame
+            @test Stoch(data_ts; ma_type=:SMMA) isa TSFrame
+        end
+
+        @testset "Williams R" begin
+            @test WR(vec3) isa Matrix{Float64}
+            res = WR(data_ts)
+            @test res isa TSFrame
+            @test names(res)[1] == "WR_raw"
+            @test names(res)[2] == "WR_EMA"
+            @test WR(data_ts; n=25) isa TSFrame
         end
     end
 end

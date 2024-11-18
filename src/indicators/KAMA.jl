@@ -37,9 +37,6 @@ Calculate Kaufman's Adaptive Moving Average (KAMA) for a price series.
 - More responsive during trending markets (high ER)
 - More stable during sideways markets (low ER)
 - Minimum input length must be greater than n
-
-# References
-Kaufman, P.J. (1995). "Smarter Trading". McGraw-Hill. ISBN 0-07-034017-0.
 """
 @inline Base.@propagate_inbounds function KAMA(data::AbstractVector{T}; n::Int=10, fast::Int=2, slow::Int=30) where T <: AbstractFloat
     period = n

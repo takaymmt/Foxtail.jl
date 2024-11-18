@@ -1,40 +1,36 @@
 """
-    TMA(data::Vector{T}, period::Int) where T
-    TRIMA(data::Vector{T}, period::Int) where T
+    TMA(prices::Vector{T}; n::Int=10) where T
 
 Calculate Triangular Moving Average (TMA) for a given time series data.
-Also known as TRIMA (TRIangular Moving Average).
 
-Triangular Moving Average is a double-smoothed indicator calculated by taking a
-Simple Moving Average (SMA) of another SMA. This creates a smoother moving average
-with weights that increase linearly towards the middle of the period and then
-decrease linearly.
+A Triangular Moving Average is a double-smoothed indicator that applies two Simple Moving
+Averages (SMA) in sequence. This results in a smoother trend-following indicator compared
+to a standard SMA.
 
 # Arguments
-- `data::Vector{T}`: Input price vector of any numeric type
-- `period::Int`: Length of the moving window for average calculation
+- `prices::Vector{T}`: Input price vector of any numeric type
+- `n::Int=10`: Length of the moving window for average calculation (default: 10)
 
 # Returns
 - `Vector{T}`: Vector containing TMA values for each point in the input data
 
 # Implementation Details
-The function performs a two-step smoothing process:
-1. Calculates initial SMA with the specified period
-2. Takes another SMA of the result with period (n+1)/2, where n is the original period
+The calculation involves two steps:
+1. First SMA with period `n`
+2. Second SMA with period `(n+1)/2`
 
-The weighting pattern follows a triangular distribution:
-- Weights increase linearly to the middle period
-- Weights decrease linearly from the middle to the end
-- Results in a smoother line compared to simple SMA
+This creates a weighted moving average where:
+- Middle values receive the highest weight
+- Edge values receive progressively less weight
+- Results in reduced lag compared to multiple SMAs
 
 # Example
 ```julia
-prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-period = 4
-result = TMA(prices, period)  # Returns: [1.0, 1.25, 1.75, 2.25, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+prices = [1.0, 2.0, 3.0, 4.0, 5.0]
+result = TMA(prices; n=3)
 ```
 
-See also: [`SMA`](@ref)
+See also: [`SMA`](@ref), [`TRIMA`](@ref)
 """
 @inline Base.@propagate_inbounds function TMA(prices::Vector{T}; n::Int=10) where T
     SMA1 = SMA(prices; n=n)

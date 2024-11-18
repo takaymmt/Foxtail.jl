@@ -1,11 +1,3 @@
-function WR(ts::TSFrame, period::Int=14; field::Vector{Symbol} = [:High, :Low, :Close])
-	prices = ts[:, field] |> Matrix
-	results = WR(prices, period)
-	colnames = [:WR, :WR_EMA]
-	return TSFrame(results, index(ts), colnames = colnames)
-end
-export WR
-
 """
     WR(prices::Matrix{Float64}, period::Int=14)
 
@@ -26,7 +18,8 @@ Matrix containing Williams %R values and its EMA
 - Traditional overbought level: -20
 - Traditional oversold level: -80
 """
-@inline Base.@propagate_inbounds function WR(prices::Matrix{Float64}, period::Int=14)
+@inline Base.@propagate_inbounds function WR(prices::Matrix{Float64}; n::Int=14)
+    period = n
     if size(prices, 2) != 3
         throw(ArgumentError("prices matrix must have 3 columns [high low close]"))
     end
@@ -35,8 +28,8 @@ Matrix containing Williams %R values and its EMA
         throw(ArgumentError("period must be positive"))
     end
 
-    n = size(prices, 1)
-    if n < period
+    len = size(prices, 1)
+    if len < period
         throw(ArgumentError("price series length must be greater than period"))
     end
 
@@ -46,9 +39,9 @@ Matrix containing Williams %R values and its EMA
     closes = @view prices[:, 3]
 
     # Pre-allocate result array
-    results = zeros(n)
+    results = zeros(len)
 
-    q = MinimaxQueue{Float64}(period+1)
+    q = MinMaxQueue{Float64}(period+1)
 
     @inbounds for i in 1:period
         update!(q, highs[i], lows[i], i)
@@ -65,7 +58,7 @@ Matrix containing Williams %R values and its EMA
         end
     end
 
-    @inbounds for i in (period+1):n
+    @inbounds for i in (period+1):len
         remove_old!(q, i - period)
         update!(q, highs[i], lows[i], i)
 
@@ -81,6 +74,16 @@ Matrix containing Williams %R values and its EMA
         end
     end
 
-    ema = EMA(results, period - 1)
+    ema = EMA(results; n = period - 1)
     return hcat(results, ema)
 end
+
+@prep_mimo WR [High, Low, Close] [raw, EMA] n=14
+
+# function WR(ts::TSFrame, period::Int=14; field::Vector{Symbol} = [:High, :Low, :Close])
+# 	prices = ts[:, field] |> Matrix
+# 	results = WR(prices, period)
+# 	colnames = [:WR, :WR_EMA]
+# 	return TSFrame(results, index(ts), colnames = colnames)
+# end
+# export WR

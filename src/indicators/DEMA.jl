@@ -1,5 +1,5 @@
 """
-    DEMA(data::Vector{T}, period::Int) where T
+    DEMA(prices::Vector{T}; n::Int=10) where T
 
 Calculate Double Exponential Moving Average (DEMA) for a given time series data.
 
@@ -9,8 +9,8 @@ decrease the lag while maintaining smoothness, making it more responsive to pric
 changes than a standard EMA.
 
 # Arguments
-- `data::Vector{T}`: Input price vector of any numeric type
-- `period::Int`: Length of the initialization period for EMA calculations
+- `prices::Vector{T}`: Input price vector of any numeric type
+- `n::Int=10`: Length of the initialization period for EMA calculations (default: 10)
 
 # Returns
 - `Vector{T}`: Vector containing DEMA values for each point in the input data
@@ -31,8 +31,7 @@ Key characteristics:
 # Example
 ```julia
 prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-period = 4
-result = DEMA(prices, period)  # Returns: [1.0, 1.89, 2.78, 3.67, 4.68, 5.74, 6.80, 7.85, 8.90, 9.92]
+result = DEMA(prices; n=4)  # Calculate DEMA with period of 4
 ```
 
 See also: [`EMA`](@ref)
