@@ -69,6 +69,8 @@ function process_args(args)
 end
 
 macro prep_siso(name, args...)
+    typeof(name) == Symbol || error("First argument must be a function name")
+
     params, kw_args, call_args = process_args(args)
     haskey(params, :field) || push!(kw_args, Expr(:kw, Expr(:(::), esc(:field), Symbol), :(:Close)))
     colex = haskey(params, :n) ? Expr(:call, :Symbol, QuoteNode(name), QuoteNode(:_), :n) : QuoteNode(name)
@@ -85,8 +87,9 @@ macro prep_siso(name, args...)
 end
 
 macro prep_miso(name, in, args...)
+    typeof(name) == Symbol || error("First argument must be a function name")
+
     fields = if in.head == :vect
-        # [x for x in in.args]
         Expr(:vect, [QuoteNode(x) for x in in.args]...)
     else
         error("Second argument must be a vector of field names")
@@ -109,10 +112,12 @@ macro prep_miso(name, in, args...)
 end
 
 macro prep_simo(name, out, args...)
+    typeof(name) == Symbol || error("First argument must be a function name")
+
     colvec = if out.head == :vect
         Expr(:vect, [QuoteNode(Symbol(name, :_, x)) for x in out.args]...)
     else
-        error("Second argument must be a vector of field names")
+        error("Second argument must be a vector of output suffixes")
     end
 
     params, kw_args, call_args = process_args(args)
@@ -122,6 +127,36 @@ macro prep_simo(name, out, args...)
     return quote
         function $(esc(name))(ts::TSFrame; $(kw_args...))
             prices = ts[:, field]
+            results = $(esc(name))(prices; $(call_args...))
+            return TSFrame(results, index(ts), colnames=$colvec)
+        end
+        export $(esc(name))
+    end
+end
+
+macro prep_mimo(name, in, out, args...)
+    typeof(name) == Symbol || error("First argument must be a function name")
+
+    fields = if in.head == :vect
+        Expr(:vect, [QuoteNode(x) for x in in.args]...)
+    else
+        error("Second argument must be a vector of field names")
+    end
+
+    colvec = if out.head == :vect
+        Expr(:vect, [QuoteNode(Symbol(name, :_, x)) for x in out.args]...)
+    else
+        error("Third argument must be a vector of output suffixes")
+    end
+
+    params, kw_args, call_args = process_args(args)
+    haskey(params, :fields) || haskey(params, :field) && error("'field' or 'fields' keyword is not allowed")
+    push!(kw_args, Expr(:kw, Expr(:(::), esc(:fields), Vector{Symbol}), fields))
+
+
+    return quote
+        function $(esc(name))(ts::TSFrame; $(kw_args...))
+            prices = ts[:, fields] |> Matrix
             results = $(esc(name))(prices; $(call_args...))
             return TSFrame(results, index(ts), colnames=$colvec)
         end
