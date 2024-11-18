@@ -216,17 +216,11 @@ References:
         volty = ifelse(abs(del1) == abs(del2), 0.0, max(abs(del1), abs(del2)))
 
         # Update volatility history and sum
-        # idx = mod1(i, 10)
-        # v_sum += (volty - volty_history[idx]) / 10
-        # volty_history[idx] = volty
-
         idx = mod1(i, 65)
         old_value = volty_history[idx]
         volty_history[idx] = volty
 
-        # Calculate average volatility (simplified from original 65-period average)
-        # avg_volty = i < 30 ? volty : v_sum
-
+        # Calculate average volatility (Jurik uses 65-period average)
         if i <= 65
             v_sum += volty
             avg_volty = v_sum / i
@@ -235,7 +229,6 @@ References:
             avg_volty = v_sum / 65
         end
 
-        # Calculate relative volatility with bounds
         # Calculate relative volatility and clamp between 1.0 and len_1_pow
         r_volty = avg_volty > 0 ? volty / avg_volty : 1.0
         r_volty = clamp(r_volty, 1.0, len_1_pow)
