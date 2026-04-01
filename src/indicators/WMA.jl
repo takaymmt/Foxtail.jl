@@ -1,31 +1,35 @@
 """
-    WMA(data::Vector{T}; n::Int=10) where T
+    WMA(data::Vector{T}; n::Int=10) where T -> Vector{T}
 
-Calculate Weighted Moving Average (WMA) for a given time series data.
+Calculate Weighted Moving Average (WMA) — a linearly weighted moving average giving more weight to recent prices.
 
-# Arguments
-- `data::Vector{T}`: Input price vector of any numeric type
-- `n::Int=10`: Length of the moving window (default: 10)
+## Parameters
+- `data`: Input price vector of any numeric type.
+- `n`: Length of the moving window (default: 10). Valid range: `n >= 1`.
 
-# Returns
-- `Vector{T}`: Vector containing WMA values for each point in the input data
+## Returns
+Vector of WMA values. During initialization (first `n` elements), weights scale from 1 to `i`.
 
-# Algorithm
-Uses a weighted sum where recent values have higher weights:
-- For position i ≤ n: weights increase linearly from 1 to i
-- For position i > n: weights increase linearly from 1 to n
-- Denominator is calculated as n(n+1)/2 for full window
-- Uses circular buffer for efficient memory management
+## Formula
+```math
+WMA_t = \\frac{\\sum_{i=0}^{n-1} (n - i) \\cdot P_{t-i}}{\\sum_{i=0}^{n-1} (n - i)}
+= \\frac{n \\cdot P_t + (n-1) \\cdot P_{t-1} + \\cdots + 1 \\cdot P_{t-n+1}}{n(n+1)/2}
+```
 
-# Formula
-WMA = Σ(weight_i * price_i) / Σ(weight_i)
-where weight_i increases linearly with recency
+## Interpretation
+- Assigns linearly increasing weights to more recent prices (the most recent price gets weight `n`).
+- More responsive than SMA but less responsive than EMA for the same period.
+- Useful when a linear emphasis on recency is desired without exponential decay.
+- Forms a key building block of the Hull Moving Average (HMA).
 
-# Example
+## Example
 ```julia
 prices = [1.0, 2.0, 3.0, 4.0, 5.0]
-wma = WMA(prices, n=3)  # Returns weighted moving averages
+wma = WMA(prices; n=3)
 ```
+
+## See Also
+[`SMA`](@ref), [`EMA`](@ref), [`HMA`](@ref)
 """
 @inline Base.@propagate_inbounds function WMA(data::Vector{T}; n::Int=10) where T
     # See https://en.wikipedia.org/wiki/Moving_average#Weighted_moving_average

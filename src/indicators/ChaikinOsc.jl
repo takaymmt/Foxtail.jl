@@ -1,27 +1,38 @@
 """
-    ChaikinOsc(prices::Matrix{Float64}; fast::Int = 3, slow::Int = 10)
+    ChaikinOsc(prices::Matrix{Float64}; fast::Int=3, slow::Int=10) -> Vector{Float64}
 
-Calculate the Chaikin Oscillator, a momentum indicator derived from the Accumulation/Distribution Line (ADL).
+Calculate Chaikin Oscillator — a momentum indicator derived from the difference of two EMAs of the ADL.
 
-# Arguments
-- `prices::Matrix{Float64}`: Price matrix with columns [High, Low, Close, Volume]
-- `fast::Int = 3`: Period for the fast EMA calculation
-- `slow::Int = 10`: Period for the slow EMA calculation
+## Parameters
+- `prices`: Price/volume matrix with 4 columns `[High, Low, Close, Volume]` (`Float64`).
+- `fast`: Period for the fast EMA of ADL (default: 3). Valid range: `fast >= 1`.
+- `slow`: Period for the slow EMA of ADL (default: 10). Valid range: `slow > fast`.
 
-# Returns
-- Vector{Float64}: Chaikin Oscillator values
+## Returns
+Vector of Chaikin Oscillator values (`fast EMA(ADL) - slow EMA(ADL)`).
 
-# Details
-The Chaikin Oscillator is calculated by subtracting a slower EMA from a faster EMA of the ADL.
-Formula: ChaikinOsc = EMA(fast) of ADL - EMA(slow) of ADL
-
-# Example
-```julia
-chaikin = ChaikinOsc(prices)
-chaikin = ChaikinOsc(prices; fast=5, slow=15)
+## Formula
+```math
+ChaikinOsc_t = EMA_{\\text{fast}}(ADL)_t - EMA_{\\text{slow}}(ADL)_t
 ```
 
-See also: [`ADL`](@ref), [`EMA`](@ref)
+## Interpretation
+- Positive values indicate that the fast EMA of ADL is above the slow EMA (buying momentum).
+- Negative values indicate selling momentum.
+- Crossover above zero: bullish signal (accumulation accelerating).
+- Crossover below zero: bearish signal (distribution accelerating).
+- Divergence between the oscillator and price can signal reversals.
+- Created by: Marc Chaikin.
+
+## Example
+```julia
+# prices: [High Low Close Volume]
+prices = [105.0 100.0 103.0 1000.0; 106.0 101.0 105.0 1200.0; 104.0 99.0 100.0 900.0]
+result = ChaikinOsc(prices; fast=3, slow=10)
+```
+
+## See Also
+[`ADL`](@ref), [`OBV`](@ref), [`EMA`](@ref)
 """
 @inline Base.@propagate_inbounds function ChaikinOsc(prices::Matrix{Float64}; fast::Int = 3, slow::Int = 10)
     adl = ADL(prices)

@@ -1,29 +1,35 @@
 """
-    SMA(data::Vector{T}; n::Int) where T
+    SMA(data::Vector{T}; n::Int=14) where T -> Vector{T}
 
-Calculate Simple Moving Average (SMA) for a given time series data.
+Calculate Simple Moving Average (SMA) — the arithmetic mean of prices over a moving window.
 
-Simple Moving Average is calculated as the arithmetic mean of a specified number of
-prices over a moving window. This implementation uses a circular buffer for efficient
-memory management.
+## Parameters
+- `data`: Input price vector of any numeric type.
+- `n`: Length of the moving window (default: 14). Valid range: `n >= 1`.
 
-# Arguments
-- `data::Vector{T}`: Input price vector of any numeric type
-- `n::Int`: Length of the moving window for average calculation
+## Returns
+Vector of SMA values. During the initialization period (first `n` elements),
+the average is computed over the available data points so far.
 
-# Returns
-- `Vector{T}`: Vector containing SMA values for each point in the input data
+## Formula
+```math
+SMA_t = \\frac{1}{n} \\sum_{i=0}^{n-1} P_{t-i}
+```
 
-# Implementation Details
-The function maintains a running sum using a circular buffer to optimize performance:
-- For full buffer: Updates running sum by removing oldest price and adding new price
-- For partial buffer: Accumulates sum and computes average using current buffer length
+## Interpretation
+- The most basic trend-following indicator; smooths out short-term price fluctuations.
+- Price above SMA suggests an uptrend; price below suggests a downtrend.
+- Commonly used periods: 10, 20, 50, 100, 200.
+- Crossovers between short-period and long-period SMAs generate trading signals.
 
-# Example
+## Example
 ```julia
 prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
 result = SMA(prices; n=4)
 ```
+
+## See Also
+[`EMA`](@ref), [`WMA`](@ref), [`TMA`](@ref)
 """
 @inline Base.@propagate_inbounds function SMA(data::Vector{T}; n::Int=14) where T
     period = n
@@ -52,26 +58,26 @@ end
 @prep_siso SMA n=14
 
 """
-    SMA_stats(prices::Vector{T}; n::Int=14) where T
+    SMA_stats(prices::Vector{T}; n::Int=14) where T -> Matrix{T}
 
-Calculate Simple Moving Average (SMA) and Standard Deviation for a given time series data.
+Calculate Simple Moving Average (SMA) and Standard Deviation simultaneously for a given time series.
 
-# Arguments
-- `prices::Vector{T}`: Input price vector of any numeric type
-- `n::Int=14`: Length of the moving window for calculations
+## Parameters
+- `prices`: Input price vector of any numeric type.
+- `n`: Length of the moving window (default: 14). Valid range: `n >= 1`.
 
-# Returns
-- `Matrix{T}`: A matrix of size (length(prices), 2) where:
-  - Column 1: SMA values
-  - Column 2: Standard deviation values
+## Returns
+Matrix of size `(length(prices), 2)`:
+- Column 1: SMA values
+- Column 2: Standard deviation values
 
-# Implementation Details
-Uses a circular buffer for efficient memory management and maintains running sums for
-both prices and squared prices to optimize performance:
-- For full buffer (i > n): Updates running sums by removing oldest values and adding new ones
-- For partial buffer (i ≤ n): Accumulates sums and computes statistics using current buffer length
+## Formula
+```math
+\\mu_t = \\frac{1}{n}\\sum_{i=0}^{n-1} P_{t-i}, \\quad
+\\sigma_t = \\sqrt{\\frac{\\sum_{i=0}^{n-1} P_{t-i}^2}{n} - \\mu_t^2}
+```
 
-# Example
+## Example
 ```julia
 prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
 sma_std = SMA_stats(prices; n=4)
@@ -79,13 +85,8 @@ sma_std = SMA_stats(prices; n=4)
 # sma_std[:,2] contains standard deviation values
 ```
 
-# Mathematical Details
-Standard deviation is calculated using an online algorithm that maintains running sums:
-- Running sum (S₁) = Σxᵢ
-- Running sum of squares (S₂) = Σxᵢ²
-- Mean (μ) = S₁/n
-- Variance (σ²) = S₂/n - μ²
-- Standard deviation (σ) = √(max(0, σ²))
+## See Also
+[`SMA`](@ref), [`EMA_stats`](@ref), [`BB`](@ref)
 """
 @inline Base.@propagate_inbounds function SMA_stats(prices::Vector{T}; n::Int=14) where T
     period = n

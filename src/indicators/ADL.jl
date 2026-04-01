@@ -1,30 +1,41 @@
 """
-    ADL(prices::Matrix{T}) where T <: AbstractFloat
+    ADL(prices::Matrix{T}) where T <: AbstractFloat -> Vector{T}
 
-Calculate the Accumulation/Distribution Line (ADL) technical indicator.
+Calculate Accumulation/Distribution Line (ADL) — a cumulative volume-weighted indicator measuring money flow.
 
-The ADL is a volume-based indicator that measures the cumulative flow of money into and out of a security.
-It uses price and volume data to determine whether a security is being accumulated (bought) or distributed (sold).
+## Parameters
+- `prices`: Price/volume matrix with 4 columns `[High, Low, Close, Volume]`.
 
-# Arguments
-- `prices::Matrix{T}`: A matrix of price data where:
-  - Column 1: High prices
-  - Column 2: Low prices
-  - Column 3: Close prices
-  - Column 4: Volume data
+## Returns
+Vector of ADL values. The first period's ADL starts from `0.0 + MFV_1`.
+Returns `0.0` contribution for periods where `High == Low` or `Volume == 0`.
 
-# Returns
-- `Vector{T}`: The ADL values for each period
+## Formula
+```math
+CLV_t = \\frac{2C_t - L_t - H_t}{H_t - L_t}, \\quad
+MFV_t = CLV_t \\times V_t, \\quad
+ADL_t = ADL_{t-1} + MFV_t
+```
 
-# Formula
-1. Money Flow Multiplier (MFM) = ((Close - Low) - (High - Close)) / (High - Low)
-   Simplified as: (2 * Close - Low - High) / (High - Low)
-2. Money Flow Volume (MFV) = MFM * Volume
-3. ADL = Previous ADL + Current MFV
+Where CLV is the Close Location Value (ranges from -1 to +1).
 
-# Notes
-- Returns 0.0 for periods where (High - Low) = 0 or Volume = 0 to avoid division by zero
-- The first period's ADL starts from 0.0
+## Interpretation
+- Rising ADL indicates accumulation (buying pressure exceeds selling).
+- Falling ADL indicates distribution (selling pressure exceeds buying).
+- ADL divergence from price is a key signal: rising price with falling ADL warns of potential reversal.
+- Unlike OBV, ADL weights volume by the close's position within the high-low range, not just direction.
+- Forms the basis for the Chaikin Oscillator.
+- Created by: Marc Chaikin.
+
+## Example
+```julia
+# prices: [High Low Close Volume]
+prices = [105.0 100.0 103.0 1000.0; 106.0 101.0 105.0 1200.0]
+result = ADL(prices)
+```
+
+## See Also
+[`OBV`](@ref), [`ChaikinOsc`](@ref)
 """
 @inline Base.@propagate_inbounds function ADL(prices::Matrix{T}) where T <: AbstractFloat
     n = size(prices, 1)

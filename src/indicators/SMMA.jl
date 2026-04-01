@@ -1,39 +1,36 @@
 """
-    SMMA(data::Vector{T}; n::Int=14) where T
-    RMA(ts::TSFrame; n::Int=14, field::Symbol = :Close)
+    SMMA(data::Vector{T}; n::Int=14) where T -> Vector{T}
 
-Calculate Smoothed Moving Average (SMMA) for a given time series data.
-Also known as RMA (Running Moving Average) or Modified Moving Average (MMA).
+Calculate Smoothed Moving Average (SMMA), also known as RMA (Running Moving Average) or Wilder's Smoothing.
 
-Smoothed Moving Average is similar to EMA but uses a different smoothing approach,
-applying a gentler smoothing factor that gives more weight to historical data. This
-implementation uses a dynamic smoothing factor during initialization and a fixed
-smoothing factor afterwards.
+## Parameters
+- `data`: Input price vector of any numeric type.
+- `n`: Smoothing period (default: 14). Valid range: `n >= 1`.
 
-# Arguments
-- `data::Vector{T}`: Input price vector of any numeric type
-- `n::Int=14`: Length of the initialization period and smoothing factor calculation (default: 14)
-- `ts::TSFrame`: Time series data frame (for RMA method)
-- `field::Symbol=:Close`: Field to calculate RMA on (default: :Close)
+## Returns
+Vector of SMMA values. The first value equals the first input price.
 
-# Returns
-- `Vector{T}`: Vector containing SMMA values for each point in the input data
+## Formula
+```math
+SMMA_t = P_t \\times \\alpha + SMMA_{t-1} \\times (1 - \\alpha), \\quad \\alpha = \\frac{1}{n}
+```
 
-# Implementation Details
-The function uses different smoothing approaches based on the position in the series:
-- First point: Uses the actual price as initial SMMA
-- During initialization (i ≤ n): Uses dynamic smoothing factor α = 1/i
-- After initialization (i > n): Uses fixed smoothing factor α = 1/n
+During initialization (`i <= n`), a dynamic smoothing factor `alpha = 1/i` is used.
 
-The SMMA is calculated using the formula:
-    SMMA_t = Price_t * α + SMMA_(t-1) * (1-α)
-where α is the smoothing factor
+## Interpretation
+- Equivalent to an EMA with `alpha = 1/n` instead of `2/(n+1)`, resulting in heavier smoothing.
+- Originally introduced by J. Welles Wilder Jr. for use in RSI and ATR calculations.
+- Slower to react to price changes than EMA with the same period.
+- Also available as `RMA` (alias for TSFrame input).
 
-# Example
+## Example
 ```julia
 prices = [1.0, 2.0, 3.0, 4.0, 5.0]
-result = SMMA(prices, n=3)  # Calculate SMMA with period=3
+result = SMMA(prices; n=3)
 ```
+
+## See Also
+[`EMA`](@ref), [`SMA`](@ref), [`RSI`](@ref)
 """
 @inline Base.@propagate_inbounds function SMMA(data::Vector{T}; n::Int=14) where T
     period = n

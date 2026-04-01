@@ -1,40 +1,40 @@
 """
-    HMA(prices::Vector{T}; n::Int=10) where T
+    HMA(prices::Vector{T}; n::Int=10) where T -> Vector{T}
 
-Calculate Hull Moving Average (HMA) for a given time series data.
+Calculate Hull Moving Average (HMA) — a fast, smooth moving average with minimal lag.
 
-Hull Moving Average, developed by Alan Hull, is designed to reduce lag in moving
-averages while maintaining smoothness. It combines multiple Weighted Moving Averages
-(WMA) with different periods and uses square root of the original period for final
-smoothing, resulting in a more responsive indicator.
+## Parameters
+- `prices`: Input price vector of any numeric type.
+- `n`: Primary smoothing period (default: 10). Valid range: `n >= 2`.
 
-# Arguments
-- `prices::Vector{T}`: Input price vector of any numeric type
-- `n::Int=10`: Length of the primary moving window for average calculation (default: 10)
+## Returns
+Vector of HMA values with the same length as the input.
 
-# Returns
-- `Vector{T}`: Vector containing HMA values for each point in the input data
-
-# Implementation Details
-The function performs a three-step calculation process:
-1. Calculates WMA with n/2
-2. Calculates WMA with full n
-3. Computes final HMA using the formula:
-   WMA[sqrt(n)]( 2 * WMA[n/2] - WMA[n] )
-
-Key characteristics:
-- Uses half-length WMA to capture faster price movements
-- Subtracts full-length WMA to reduce lag
-- Final smoothing period of sqrt(n) balances responsiveness and smoothness
-- Results in minimal lag while maintaining smooth transitions
-
-# Example
-```julia
-prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-result = HMA(prices; n=4)  # Returns HMA values with default window size
+## Formula
+```math
+HMA_t = WMA_{\\lfloor\\sqrt{n}\\rfloor}\\!\\Big(2 \\cdot WMA_{\\lfloor n/2 \\rfloor}(P) - WMA_n(P)\\Big)
 ```
 
-See also: [`WMA`](@ref)
+Three-step calculation:
+1. Compute `WMA(n/2)` of prices
+2. Compute `WMA(n)` of prices
+3. Apply `WMA(sqrt(n))` to `2 * step1 - step2`
+
+## Interpretation
+- Developed by Alan Hull to virtually eliminate lag while improving smoothness.
+- Significantly more responsive to price changes than SMA or EMA of equal period.
+- Useful for identifying trend reversals quickly.
+- May overshoot during sharp price movements due to the `2 * WMA(n/2) - WMA(n)` extrapolation.
+- Created by: Alan Hull (2005).
+
+## Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+result = HMA(prices; n=4)
+```
+
+## See Also
+[`WMA`](@ref), [`EMA`](@ref), [`DEMA`](@ref)
 """
 @inline Base.@propagate_inbounds function HMA(prices::Vector{T}; n::Int=10) where T
     WMA1 = WMA(prices; n = div(n, 2))

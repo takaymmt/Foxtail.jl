@@ -1,58 +1,45 @@
 """
     ALMA(prices::Vector; n::Int=10, offset::Float64=0.85, sigma::Float64=6.0) -> Vector{Float64}
 
-Arnaud Legoux Moving Average (ALMA) - A weighted moving average that reduces lag while maintaining smoothness.
+Calculate Arnaud Legoux Moving Average (ALMA) — a Gaussian-weighted moving average that reduces lag while maintaining smoothness.
 
-# Arguments
-- `prices::Vector`: Input price series
-- `n::Int=10`: Window size/period length
-- `offset::Float64=0.85`: Controls weight distribution (0 to 1). Higher values emphasize recent prices
-- `sigma::Float64=6.0`: Controls Gaussian curve width. Lower values create sharper curves
+## Parameters
+- `prices`: Input price series (any numeric vector).
+- `n`: Window size / period length (default: 10). Valid range: `n >= 1`.
+- `offset`: Controls weight distribution center (default: 0.85). Valid range: `0.0` to `1.0`.
+  Higher values emphasize recent prices; lower values emphasize older prices.
+- `sigma`: Controls Gaussian curve width (default: 6.0). Valid range: `> 0`.
+  Lower values create sharper (more responsive) curves; higher values create gentler (smoother) curves.
 
-# Returns
-- `Vector{Float64}`: ALMA values for the input series
+## Returns
+Vector of ALMA values for the input series.
 
-# Details
-ALMA uses Gaussian-weighted coefficients to calculate a moving average with reduced lag.
-The weights follow a bell curve distribution shaped by the offset and sigma parameters.
-
-# Formula
+## Formula
 ```math
-ALMA_t = \\sum_{i=0}^{n-1} w_i \\cdot P_{t-i}
+ALMA_t = \\sum_{i=0}^{n-1} \\hat{w}_i \\cdot P_{t-n+1+i}
 ```
-where:
-- ``w_i`` are normalized Gaussian weights
-- ``P_{t-i}`` is the price i periods ago
-- ``n`` is the window size
+where the normalized Gaussian weights are:
+```math
+w_i = \\exp\\!\\left(-\\frac{(i - m)^2}{2s^2}\\right), \\quad
+m = \\text{offset} \\cdot (n-1), \\quad s = \\frac{n}{\\sigma}, \\quad
+\\hat{w}_i = \\frac{w_i}{\\sum_j w_j}
+```
 
-# Weight Calculation
-1. ``w_i = exp(-(i - m)^2 / (2s^2))``
-   - ``m = offset \\cdot (n-1)``
-   - ``s = n/sigma``
-2. Weights are normalized: ``w_i = w_i / \\sum w_j``
+## Interpretation
+- Combines low lag (via offset toward recent prices) with smoothness (via Gaussian weighting).
+- `offset=0.85` places the Gaussian peak near the most recent data, reducing lag.
+- `sigma=6.0` provides a broad, smooth bell curve; smaller values sharpen the response.
+- Common parameter sets: short-term (n=9), medium-term (n=21), long-term (n=50).
+- Created by: Arnaud Legoux and Dimitris Kouzis-Loukas.
 
-# Parameter Guidelines
-- Short-term:  n=9,  offset=0.85, sigma=6
-- Medium-term: n=21, offset=0.85, sigma=6
-- Long-term:   n=50, offset=0.85, sigma=6
+## Example
+```julia
+prices = [100.0, 102.0, 101.0, 103.0, 105.0, 104.0, 106.0]
+result = ALMA(prices; n=5, offset=0.85, sigma=6.0)
+```
 
-## Parameters Details
-window (n): Integer, default=9
-    - Number of periods to consider
-    - Larger values capture longer trends but increase lag
-    - Common values: 9 (short-term) to 50 (long-term)
-
-offset: Float64, default=0.85
-    - Controls the weight distribution's position (0 to 1)
-    - Higher values (→1) emphasize recent prices
-    - Lower values (→0) emphasize older prices
-    - 0.85 is commonly used for balanced sensitivity
-
-sigma: Float64, default=6.0
-    - Controls the Gaussian curve's shape
-    - Lower values (e.g., 2) create sharper curves = more responsive but noisier
-    - Higher values (e.g., 6) create gentler curves = smoother but more lag
-    - 6.0 provides good balance between smoothing and responsiveness
+## See Also
+[`EMA`](@ref), [`HMA`](@ref), [`KAMA`](@ref)
 """
 
 @inline Base.@propagate_inbounds function ALMA(prices::Vector; n::Int=10, offset::Float64=0.85, sigma::Float64=6.0)

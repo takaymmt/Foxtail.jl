@@ -1,31 +1,39 @@
 """
-    ZLEMA(data::Vector{T}; n::Int=10) where T
+    ZLEMA(data::Vector{T}; n::Int=10) where T -> Vector{T}
 
-Calculate Zero-Lag Exponential Moving Average (ZLEMA) for a given time series.
+Calculate Zero-Lag Exponential Moving Average (ZLEMA) — an EMA variant that compensates for lag using a de-lagged price input.
 
-# Arguments
-- `data::Vector{T}`: Input price series
-- `n::Int=10`: Period length for ZLEMA calculation
+## Parameters
+- `data`: Input price vector of any numeric type.
+- `n`: Smoothing period (default: 10). Valid range: `n >= 1`.
 
-# Returns
-- `Vector{T}`: ZLEMA values for the input series
+## Returns
+Vector of ZLEMA values. The first value equals the first input price.
 
-# Details
-ZLEMA reduces lag in traditional moving averages by using a modified price series:
-1. Modified price = 2 * current_price - price[lag]
-2. ZLEMA = α * modified_price + (1-α) * previous_ZLEMA
-
-Where:
-- lag = -(period-1)/2
-- α = 2/(1+period)
-
-# Example
-```julia
-prices = [100.0, 101.0, 102.0, 103.0, 104.0]
-zlema = ZLEMA(prices, n=3)
+## Formula
+```math
+P'_t = 2 \\cdot P_t - P_{t - \\lfloor(n-1)/2\\rfloor}, \\quad
+ZLEMA_t = \\alpha \\cdot P'_t + (1 - \\alpha) \\cdot ZLEMA_{t-1}, \\quad
+\\alpha = \\frac{2}{n + 1}
 ```
 
-See also: [`EMA`](@ref)
+By using a modified price series (`P'`) that subtracts the lagged price, ZLEMA compensates
+for the inherent delay in exponential smoothing.
+
+## Interpretation
+- Reduces lag compared to standard EMA by incorporating a look-back correction.
+- More responsive to recent price changes while maintaining EMA-like smoothness.
+- Useful for short-to-medium term trend following where lag reduction is important.
+- May produce more false signals than EMA in choppy markets due to the de-lagging.
+
+## Example
+```julia
+prices = [100.0, 101.0, 102.0, 103.0, 104.0]
+zlema = ZLEMA(prices; n=3)
+```
+
+## See Also
+[`EMA`](@ref), [`DEMA`](@ref), [`TEMA`](@ref)
 """
 @inline Base.@propagate_inbounds function ZLEMA(data::Vector{T}; n::Int=10) where T
     period = n

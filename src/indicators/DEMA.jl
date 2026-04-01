@@ -1,40 +1,35 @@
 """
-    DEMA(prices::Vector{T}; n::Int=10) where T
+    DEMA(prices::Vector{T}; n::Int=10) where T -> Vector{T}
 
-Calculate Double Exponential Moving Average (DEMA) for a given time series data.
+Calculate Double Exponential Moving Average (DEMA) — an EMA variant that reduces lag by combining two EMAs.
 
-Double Exponential Moving Average, developed by Patrick Mulloy, aims to reduce the
-inherent lag of traditional moving averages. It uses a combination of two EMAs to
-decrease the lag while maintaining smoothness, making it more responsive to price
-changes than a standard EMA.
+## Parameters
+- `prices`: Input price vector of any numeric type.
+- `n`: Smoothing period for both EMA stages (default: 10). Valid range: `n >= 1`.
 
-# Arguments
-- `prices::Vector{T}`: Input price vector of any numeric type
-- `n::Int=10`: Length of the initialization period for EMA calculations (default: 10)
+## Returns
+Vector of DEMA values with the same length as the input.
 
-# Returns
-- `Vector{T}`: Vector containing DEMA values for each point in the input data
-
-# Implementation Details
-The function performs a three-step calculation process:
-1. Calculates initial EMA with the specified period
-2. Calculates second EMA of the first EMA using the same period
-3. Computes final DEMA using the formula:
-   DEMA = 2 * EMA(price) - EMA(EMA(price))
-
-Key characteristics:
-- Double smoothing reduces noise while maintaining responsiveness
-- Multiplier of 2 and subtraction of double-smoothed EMA reduces lag
-- More responsive to price changes than standard EMA
-- Provides better trend following capabilities with less delay
-
-# Example
-```julia
-prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-result = DEMA(prices; n=4)  # Calculate DEMA with period of 4
+## Formula
+```math
+DEMA_t = 2 \\cdot EMA_n(P)_t - EMA_n(EMA_n(P))_t
 ```
 
-See also: [`EMA`](@ref)
+## Interpretation
+- Developed by Patrick Mulloy (1994) to reduce the inherent lag of standard EMAs.
+- More responsive to price changes than a single EMA of equal period.
+- Useful for short-to-medium term trend following where reduced lag is critical.
+- The `2 * EMA - EMA(EMA)` construction effectively cancels out much of the single-EMA lag.
+- Created by: Patrick Mulloy.
+
+## Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+result = DEMA(prices; n=4)
+```
+
+## See Also
+[`EMA`](@ref), [`TEMA`](@ref), [`ZLEMA`](@ref)
 """
 @inline Base.@propagate_inbounds function DEMA(prices::Vector{T}; n::Int=10) where T
     EMA1 = EMA(prices; n=n)

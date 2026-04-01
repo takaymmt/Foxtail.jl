@@ -1,32 +1,37 @@
 """
-    TEMA(prices::Vector{T}; n::Int=10) where T
+    TEMA(prices::Vector{T}; n::Int=10) where T -> Vector{T}
 
-Calculate Triple Exponential Moving Average (TEMA) for a given price series.
+Calculate Triple Exponential Moving Average (TEMA) — further reduces lag beyond DEMA by using three cascaded EMAs.
 
-# Arguments
-- `prices::Vector{T}`: Input price vector
-- `n::Int=10`: Period length for EMA calculations (default: 10)
+## Parameters
+- `prices`: Input price vector of any numeric type.
+- `n`: Smoothing period for all three EMA stages (default: 10). Valid range: `n >= 1`.
 
-# Returns
-- `Vector{T}`: TEMA values calculated for each point in the input series
+## Returns
+Vector of TEMA values with the same length as the input.
 
-# Details
-TEMA is calculated using three EMAs and a combination formula to reduce lag while maintaining smoothness:
+## Formula
+```math
+TEMA_t = 3 \\cdot EMA_n(P)_t - 3 \\cdot EMA_n(EMA_n(P))_t + EMA_n(EMA_n(EMA_n(P)))_t
+```
 
-TEMA = (EMA1 - EMA2) * 3 + EMA3
+Equivalently: `TEMA = 3*(EMA1 - EMA2) + EMA3`
 
-where:
-- EMA1 = EMA(price)
-- EMA2 = EMA(EMA1)
-- EMA3 = EMA(EMA2)
+## Interpretation
+- Developed by Patrick Mulloy (1994) as an extension of DEMA.
+- Provides the least lag among EMA/DEMA/TEMA for the same period.
+- Superior noise reduction through triple smoothing while maintaining responsiveness.
+- Best suited for trending markets; may produce whipsaws in ranging conditions.
+- Created by: Patrick Mulloy.
 
-# Characteristics
-- Provides superior noise reduction through triple smoothing
-- More responsive to price changes than EMA and DEMA
-- Effectively reduces lag in trending markets
-- Better handles short-term price fluctuations
+## Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+result = TEMA(prices; n=4)
+```
 
-See also: [`EMA`](@ref), [`DEMA`](@ref)
+## See Also
+[`EMA`](@ref), [`DEMA`](@ref), [`T3`](@ref)
 """
 @inline Base.@propagate_inbounds function TEMA(prices::Vector{T}; n::Int=10) where T
     EMA1 = EMA(prices; n=n)

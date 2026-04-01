@@ -1,34 +1,36 @@
 """
-    EMA(data::Vector{T}; n::Int=10) where T
+    EMA(data::Vector{T}; n::Int=10) where T -> Vector{T}
 
-Calculate Exponential Moving Average (EMA) for a given time series data.
+Calculate Exponential Moving Average (EMA) — a weighted moving average that gives more weight to recent prices.
 
-Exponential Moving Average applies more weight to recent prices while still considering
-historical data, with weights decreasing exponentially. This implementation uses a
-dynamic smoothing factor for the initial period and a fixed smoothing factor afterwards.
+## Parameters
+- `data`: Input price vector of any numeric type.
+- `n`: Smoothing period (default: 10). Valid range: `n >= 1`.
 
-# Arguments
-- `data::Vector{T}`: Input price vector of any numeric type
-- `n::Int=10`: Length of the initialization period and smoothing factor calculation (default: 10)
+## Returns
+Vector of EMA values. The first value equals the first input price.
 
-# Returns
-- `Vector{T}`: Vector containing EMA values for each point in the input data
+## Formula
+```math
+EMA_t = P_t \\times \\alpha + EMA_{t-1} \\times (1 - \\alpha), \\quad \\alpha = \\frac{2}{n + 1}
+```
 
-# Implementation Details
-The function uses different smoothing approaches based on the position in the series:
-- First point: Uses the actual price as initial EMA
-- During initialization (i ≤ n): Uses dynamic smoothing factor α = 2/(1+i)
-- After initialization (i > n): Uses fixed smoothing factor α = 2/(1+n)
+During initialization (`i <= n`), a dynamic smoothing factor `alpha = 2/(1+i)` is used.
 
-The EMA is calculated using the formula:
-    EMA_t = Price_t * α + EMA_(t-1) * (1-α)
-where α is the smoothing factor
+## Interpretation
+- More responsive to recent price changes than SMA due to exponential weighting.
+- Price crossing above/below EMA can signal trend changes.
+- Common periods: 9, 12, 26 (MACD components), 50, 200 (long-term trend).
+- Multiple EMA crossovers (e.g., 12/26) form the basis of MACD.
 
-# Example
+## Example
 ```julia
 prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-result = EMA(prices, n=4)  # Returns: [1.0, 1.67, 2.33, 3.0, 3.8, 4.68, 5.6, 6.57, 7.54, 8.52]
+result = EMA(prices; n=4)
 ```
+
+## See Also
+[`SMA`](@ref), [`DEMA`](@ref), [`TEMA`](@ref), [`ZLEMA`](@ref)
 """
 @inline Base.@propagate_inbounds function EMA(data::Vector{T}; n::Int=10) where T
     period = n
@@ -55,31 +57,38 @@ end
 @prep_siso EMA n=10
 
 """
-    EMA_stats(data::Vector{T}; n::Int=10) where T
+    EMA_stats(data::Vector{T}; n::Int=10) where T -> Matrix{T}
 
-Calculate Exponential Moving Average (EMA) and its standard deviation using the recursive method
-described in "Incremental calculation of weighted mean and variance" (Tony Finch, 2009).
+Calculate Exponential Moving Average (EMA) and its standard deviation simultaneously.
 
-# Arguments
-- `data::Vector{T}`: Input price vector of any numeric type
-- `n::Int=10`: Length for calculating the smoothing factor (default: 10)
+## Parameters
+- `data`: Input price vector of any numeric type.
+- `n`: Smoothing period (default: 10). Valid range: `n >= 1`.
 
-# Returns
-- `Matrix{T}`: A matrix where:
-  - First column contains EMA values
-  - Second column contains standard deviations
+## Returns
+Matrix of size `(length(data), 2)`:
+- Column 1: EMA values
+- Column 2: Standard deviation values (exponentially weighted)
 
-# Implementation Details
-Uses different smoothing factors based on the position:
-- First point: Uses actual price as initial EMA
-- During initialization (i ≤ n): Uses dynamic α = 2/(1+i)
-- After initialization (i > n): Uses fixed α = 2/(1+n)
+## Formula
+```math
+\\mu_t = \\alpha \\cdot P_t + (1 - \\alpha) \\cdot \\mu_{t-1}, \\quad
+\\sigma^2_t = (1 - \\alpha)(\\sigma^2_{t-1} + \\alpha (P_t - \\mu_{t-1})^2)
+```
 
-Variance is updated using the recursive formula:
-var[t] = (1 - α) * (var[t-1] + α * (x[t] - mean[t-1])²)
+Based on the recursive method from "Incremental calculation of weighted mean and variance"
+(Tony Finch, 2009).
 
-# Reference
-- "Incremental calculation of weighted mean and variance" written by Tony Finch, Feb 2009
+## Example
+```julia
+prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+ema_std = EMA_stats(prices; n=4)
+# ema_std[:,1] contains EMA values
+# ema_std[:,2] contains standard deviation values
+```
+
+## See Also
+[`EMA`](@ref), [`SMA_stats`](@ref), [`BB`](@ref)
 """
 @inline Base.@propagate_inbounds function EMA_stats(data::Vector{T}; n::Int=10) where T
     period = n

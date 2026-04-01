@@ -1,42 +1,40 @@
 """
-    KAMA(data::AbstractVector{T}; n::Int=10, fast::Int=2, slow::Int=30) where T <: AbstractFloat
+    KAMA(data::AbstractVector{T}; n::Int=10, fast::Int=2, slow::Int=30) where T <: AbstractFloat -> Vector{T}
 
-Calculate Kaufman's Adaptive Moving Average (KAMA) for a price series.
+Calculate Kaufman's Adaptive Moving Average (KAMA) — an adaptive MA that adjusts speed based on market efficiency.
 
-# Arguments
-- `data`: Input price series
-- `n`: Lookback period for efficiency ratio calculation (default: 10)
-- `fast`: Fast EMA period for most efficient market (default: 2)
-- `slow`: Slow EMA period for least efficient market (default: 30)
+## Parameters
+- `data`: Input price series (must be `AbstractFloat` subtype).
+- `n`: Lookback period for the Efficiency Ratio (default: 10). Valid range: `n >= 1`.
+- `fast`: Fast EMA period used when the market is most efficient/trending (default: 2). Valid range: `fast >= 1`.
+- `slow`: Slow EMA period used when the market is least efficient/noisy (default: 30). Valid range: `slow > fast`.
 
-# Returns
-- Vector containing KAMA values
+## Returns
+Vector of KAMA values. The first value equals the first input price.
 
-# Algorithm
-1. Calculate Efficiency Ratio (ER)
-   ```
-   Direction = |Price(t) - Price(t-n)|
-   Volatility = Σ|Price(i) - Price(i-1)| for i = t-n+1 to t
-   ER = Direction / Volatility
-   ```
+## Formula
+```math
+\\begin{aligned}
+ER_t &= \\frac{|P_t - P_{t-n}|}{\\sum_{i=1}^{n} |P_{t-n+i} - P_{t-n+i-1}|} \\\\[4pt]
+SC_t &= \\left[ER_t \\cdot \\left(\\frac{2}{\\text{fast}+1} - \\frac{2}{\\text{slow}+1}\\right) + \\frac{2}{\\text{slow}+1}\\right]^2 \\\\[4pt]
+KAMA_t &= KAMA_{t-1} + SC_t \\cdot (P_t - KAMA_{t-1})
+\\end{aligned}
+```
 
-2. Calculate Smoothing Constant (SC)
-   ```
-   Fast_SC = 2/(fast + 1)
-   Slow_SC = 2/(slow + 1)
-   SC = [ER × (Fast_SC - Slow_SC) + Slow_SC]²
-   ```
+## Interpretation
+- Adapts its smoothing speed based on the Efficiency Ratio (ER): trending markets (high ER) produce fast tracking; choppy markets (low ER) produce heavy smoothing.
+- Virtually eliminates whipsaws in sideways markets while staying responsive in trends.
+- Developed by Perry Kaufman and described in "Smarter Trading" (1995).
+- Created by: Perry Kaufman.
 
-3. Calculate KAMA
-   ```
-   KAMA(t) = KAMA(t-1) + SC × (Price(t) - KAMA(t-1))
-   ```
+## Example
+```julia
+prices = [100.0, 102.0, 101.0, 103.0, 105.0, 104.0, 106.0]
+result = KAMA(prices; n=10, fast=2, slow=30)
+```
 
-# Notes
-- First n-1 values are set to input prices
-- More responsive during trending markets (high ER)
-- More stable during sideways markets (low ER)
-- Minimum input length must be greater than n
+## See Also
+[`EMA`](@ref), [`JMA`](@ref), [`ALMA`](@ref)
 """
 @inline Base.@propagate_inbounds function KAMA(data::AbstractVector{T}; n::Int=10, fast::Int=2, slow::Int=30) where T <: AbstractFloat
     period = n

@@ -1,36 +1,42 @@
 """
-    T3(data::Vector{T}; n::Int=10, a::Float64=0.7) where T
+    T3(data::Vector{T}; n::Int=10, a::Float64=0.7) where T -> Vector{T}
 
-Calculate T3 Moving Average (Tillson T3) for a given time series.
+Calculate Tillson T3 Moving Average — a six-stage EMA combination producing an ultra-smooth, low-lag indicator.
 
-# Arguments
-- `data::Vector{T}`: Input price vector
-- `n::Int=10`: Period length for EMA calculations
-- `a::Float64=0.7`: Volume factor controlling smoothness vs. responsiveness
+## Parameters
+- `data`: Input price vector of any numeric type.
+- `n`: Period length for each of the six cascaded EMA stages (default: 10). Valid range: `n >= 1`.
+- `a`: Volume factor controlling smoothness vs. responsiveness (default: 0.7). Valid range: `0.0` to `1.0`.
+  Higher values produce smoother output; lower values increase responsiveness.
 
-# Returns
-- `Vector{T}`: T3 moving average values
+## Returns
+Vector of T3 values with the same length as the input.
 
-# Details
-T3 is a sophisticated moving average developed by Tim Tillson that combines multiple
-EMAs with a volume factor to produce a smooth, responsive indicator with minimal lag.
-
-The calculation involves:
-1. Six cascaded EMAs: EMA1 through EMA6
-2. Weighted combination using coefficients derived from volume factor a:
-   - c1 = -a³
-   - c2 = 3a² + 3a³
-   - c3 = -6a² - 3a - 3a³
-   - c4 = 1 + 3a + a³ + 3a²
-
-# Examples
-```julia
-prices = [100.0, 102.0, 104.0, 103.0, 102.0]
-t3 = T3(prices)  # Using default n=10, a=0.7
-t3_custom = T3(prices; n=8, a=0.618)  # Custom parameters
+## Formula
+```math
+T3 = c_1 \\cdot EMA^6 + c_2 \\cdot EMA^5 + c_3 \\cdot EMA^4 + c_4 \\cdot EMA^3
 ```
 
-See also: [`EMA`](@ref)
+where `EMA^k` denotes the k-th cascaded EMA, and the coefficients are:
+```math
+c_1 = -a^3, \\quad c_2 = 3a^2 + 3a^3, \\quad c_3 = -6a^2 - 3a - 3a^3, \\quad c_4 = 1 + 3a + a^3 + 3a^2
+```
+
+## Interpretation
+- Produces an extremely smooth curve with very low lag for a given smoothing level.
+- The volume factor `a` controls the trade-off: `a=0.7` (default) provides good balance.
+- Better suited for trend identification than for generating precise entry/exit signals.
+- Can overshoot in strongly trending markets due to the multi-EMA extrapolation.
+- Created by: Tim Tillson (1998).
+
+## Example
+```julia
+prices = [100.0, 102.0, 104.0, 103.0, 102.0, 105.0, 107.0]
+t3 = T3(prices; n=5, a=0.7)
+```
+
+## See Also
+[`EMA`](@ref), [`TEMA`](@ref), [`DEMA`](@ref)
 """
 @inline Base.@propagate_inbounds function T3(prices::Vector{T}; n::Int=10, a::Float64 = 0.7) where T
     EMA1 = EMA(prices; n=n)
