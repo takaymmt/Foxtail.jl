@@ -122,3 +122,27 @@ Return the minimum value in the current window.
 @inline function get_min(q::MinMaxQueue)
     return first(q.min_data)[1]
 end
+
+"""
+    get_max_idx(q::MinMaxQueue) -> Int
+
+Return the index of the maximum value in the current window.
+
+# Arguments
+- `q`: The MinMaxQueue to query
+"""
+@inline function get_max_idx(q::MinMaxQueue)
+    return first(q.max_data)[2]
+end
+
+"""
+    get_min_idx(q::MinMaxQueue) -> Int
+
+Return the index of the minimum value in the current window.
+
+# Arguments
+- `q`: The MinMaxQueue to query
+"""
+@inline function get_min_idx(q::MinMaxQueue)
+    return first(q.min_data)[2]
+end

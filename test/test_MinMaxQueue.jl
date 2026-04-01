@@ -134,4 +134,56 @@
             @test get_min(q) == 11.0 - i
         end
     end
+
+    @testset "Index Accessors" begin
+        q = MinMaxQueue{Float64}(10)
+
+        # After inserting (10, 5, 8) at indices 1, 2, 3
+        update!(q, 10.0, 10.0, 1)
+        update!(q, 5.0, 5.0, 2)
+        update!(q, 8.0, 8.0, 3)
+        @test get_max_idx(q) == 1   # max value 10.0 at index 1
+        @test get_min_idx(q) == 2   # min value 5.0 at index 2
+
+        # After removing index 1: max moves to index 3 (value 8), min stays at 2
+        remove_old!(q, 1)
+        @test get_max(q) == 8.0
+        @test get_max_idx(q) == 3
+        @test get_min(q) == 5.0
+        @test get_min_idx(q) == 2
+
+        # Empty queue should throw BoundsError
+        q2 = MinMaxQueue{Float64}(5)
+        @test_throws BoundsError get_max_idx(q2)
+        @test_throws BoundsError get_min_idx(q2)
+
+        # Single element: index matches insertion index
+        update!(q2, 42.0, 42.0, 7)
+        @test get_max_idx(q2) == 7
+        @test get_min_idx(q2) == 7
+
+        # Different high/low values track indices independently
+        q3 = MinMaxQueue{Float64}(10)
+        # High: [3, 5, 1], Low: [10, 8, 12]
+        update!(q3, 3.0, 10.0, 1)
+        update!(q3, 5.0, 8.0, 2)
+        update!(q3, 1.0, 12.0, 3)
+        @test get_max_idx(q3) == 2   # max high 5.0 at index 2
+        @test get_min_idx(q3) == 2   # min low 8.0 at index 2
+
+        # Sliding window: verify index updates correctly
+        q4 = MinMaxQueue{Float64}(5)
+        for i in 1:5
+            update!(q4, Float64(i), Float64(6 - i), i)
+        end
+        # Highs: [1,2,3,4,5] -> max at 5; Lows: [5,4,3,2,1] -> min at 5
+        @test get_max_idx(q4) == 5
+        @test get_min_idx(q4) == 5
+
+        # Remove first 3 elements
+        remove_old!(q4, 3)
+        # Remaining highs: [4,5] -> max at 5; Remaining lows: [2,1] -> min at 5
+        @test get_max_idx(q4) == 5
+        @test get_min_idx(q4) == 5
+    end
 end

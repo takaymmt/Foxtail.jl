@@ -6,7 +6,7 @@ export
 	CircBuff, CircDeque, MinMaxQueue,
 	# functions
 	isfull, capacity, value, merge_in!,
-	update!, remove_old!, get_max, get_min
+	update!, remove_old!, get_max, get_min, get_max_idx, get_min_idx
 
 include("tools/CircBuff.jl")
 include("tools/CircDeque.jl")
