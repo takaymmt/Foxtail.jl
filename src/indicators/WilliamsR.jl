@@ -1,22 +1,42 @@
 """
-    WR(prices::Matrix{Float64}, period::Int=14)
+    WR(prices::Matrix{Float64}; n::Int=14) -> Matrix{Float64}
 
-Williams %R (Williams Percent Range) is a momentum indicator that measures overbought and oversold levels.
+Calculate Williams %R (Williams Percent Range) — a momentum oscillator measuring overbought/oversold levels.
 
-# Calculation
-%R = (Highest High - Close)/(Highest High - Lowest Low) × -100
+## Parameters
+- `prices`: Price matrix with 3 columns `[High, Low, Close]` (`Float64`).
+- `n`: Lookback period (default: 14). Valid range: `n >= 1`.
 
-# Parameters
-- `prices`: Price matrix with columns [high, low, close]
-- `period`: Lookback period (default: 14)
+## Returns
+Matrix of size `(rows, 2)`:
+- Column 1: Raw Williams %R values
+- Column 2: EMA of Williams %R (period `n-1`)
 
-# Returns
-Matrix containing Williams %R values and its EMA
+## Formula
+```math
+\\%R_t = -100 \\times \\frac{HH_n - C_t}{HH_n - LL_n}
+```
 
-# Notes
-- Oscillates between 0 and -100
-- Traditional overbought level: -20
-- Traditional oversold level: -80
+Where `HH_n` = highest high and `LL_n` = lowest low over the last `n` periods.
+
+## Interpretation
+- Oscillates between 0 and -100.
+- Overbought: %R >= -20 (price near the top of its recent range).
+- Oversold: %R <= -80 (price near the bottom of its recent range).
+- Mathematically the inverse of Fast Stochastic %K (mirrored and shifted).
+- Most useful for identifying potential reversal points in ranging markets.
+- Created by: Larry Williams.
+
+## Example
+```julia
+# prices: [High Low Close]
+prices = [105.0 100.0 103.0; 106.0 101.0 102.0; 107.0 99.0 105.0]
+result = WR(prices; n=2)
+# result[:,1] = raw %R, result[:,2] = EMA of %R
+```
+
+## See Also
+[`Stoch`](@ref), [`RSI`](@ref)
 """
 @inline Base.@propagate_inbounds function WR(prices::Matrix{Float64}; n::Int=14)
     period = n
@@ -79,11 +99,3 @@ Matrix containing Williams %R values and its EMA
 end
 
 @prep_mimo WR [High, Low, Close] [raw, EMA] n=14
-
-# function WR(ts::TSFrame, period::Int=14; field::Vector{Symbol} = [:High, :Low, :Close])
-# 	prices = ts[:, field] |> Matrix
-# 	results = WR(prices, period)
-# 	colnames = [:WR, :WR_EMA]
-# 	return TSFrame(results, index(ts), colnames = colnames)
-# end
-# export WR

@@ -1,60 +1,41 @@
 """
-    ATR (Average True Range)
-    ATR(ts::TSFrame, period::Int=14; field::Vector{Symbol}=[:High, :Low, :Close], ma_type::Symbol=:EMA) -> TSFrame
+    ATR(prices::Matrix{Float64}; n::Int=14, ma_type::Symbol=:EMA) -> Vector{Float64}
 
-A technical indicator that measures market volatility by calculating the average range of price movement over a specified period.
+Calculate Average True Range (ATR) — a volatility indicator measuring the average range of price movement.
 
-## Basic Concept
-- Measures market volatility using the true range of price movement
-- True Range is the greatest of:
-  1. High - Low
-  2. |High - Previous Close|
-  3. |Low - Previous Close|
-- Smooths true range values using moving averages
-- Created by J. Welles Wilder Jr. (1978)
-
-## Interpretation / Trading Signals
-- Higher values: Increased volatility
-- Lower values: Decreased volatility
-- Common uses:
-  - Stop-loss placement
-  - Position sizing
-  - Breakout confirmation
-- Best for volatility assessment, not price direction
-
-## Usage Examples
-```julia
-# Basic usage
-result = ATR(price_data)
-
-# Custom settings
-result = ATR(price_data, 20, ma_type=:SMA)
-result = ATR(price_data, field=[:high, :low, :close])
-```
-
-## Core Formula
-```math
-TR_t = max(high_t - low_t, |high_t - close_{t-1}|, |low_t - close_{t-1}|)
-ATR_t = MA(TR, period)
-```
-
-## Parameters and Arguments
-- `ts::TSFrame`: Time series data with high, low, and close prices
-- `period::Int`: (Default: 14)
-  - Lookback period for moving average
-  - Valid range: > 0
-- `field::Vector{Symbol}`: (Default: [:High, :Low, :Close])
-  - Column names for price data
-- `ma_type::Symbol`: (Default: :EMA)
-  - Moving average type: :SMA, :EMA, or :SMMA/:RMA
+## Parameters
+- `prices`: Price matrix with 3 columns `[High, Low, Close]` (`Float64`).
+- `n`: Lookback period for smoothing the True Range (default: 14). Valid range: `n >= 1`.
+- `ma_type`: Moving average type for smoothing (default: `:EMA`).
+  Options: `:SMA`, `:EMA`, `:SMMA`/`:RMA`.
 
 ## Returns
-- `TSFrame`: Single column :ATR containing the indicator values
+Vector of ATR values with the same length as the number of input rows.
 
-## Implementation Details
-1. Calculate True Range for each period
-2. Apply specified moving average
-3. Return results in TSFrame format
+## Formula
+```math
+TR_t = \\max(H_t - L_t,\\; |H_t - C_{t-1}|,\\; |L_t - C_{t-1}|), \\quad
+ATR_t = MA_n(TR)_t
+```
+
+The first True Range value uses `H_1 - L_1` (no previous close available).
+
+## Interpretation
+- Higher ATR values indicate increased market volatility.
+- Lower ATR values indicate decreased volatility (consolidation).
+- Common uses: stop-loss placement (e.g., 2x ATR trailing stop), position sizing, and breakout confirmation.
+- ATR measures volatility magnitude, not price direction.
+- Created by: J. Welles Wilder Jr. (1978).
+
+## Example
+```julia
+# prices matrix: [High Low Close]
+prices = [105.0 100.0 103.0; 106.0 101.0 104.0; 104.0 99.0 100.0]
+result = ATR(prices; n=2, ma_type=:EMA)
+```
+
+## See Also
+[`BB`](@ref), [`EMA`](@ref), [`SMMA`](@ref)
 """
 @inline Base.@propagate_inbounds function ATR(prices::Matrix{Float64}; n::Int=14, ma_type::Symbol=:EMA)
     period = n
@@ -68,15 +49,7 @@ ATR_t = MA(TR, period)
 
     true_ranges = TR(prices)
 
-    if ma_type == :SMA
-        return SMA(true_ranges; n=period)
-    elseif ma_type == :EMA
-        return EMA(true_ranges; n=period)
-    elseif ma_type == :SMMA || ma_type == :RMA
-        return SMMA(true_ranges; n=period)
-    else
-        throw(ArgumentError("ma_type must be either :SMA or :EMA"))
-    end
+    return apply_ma(true_ranges, ma_type; n=period)
 end
 
 @inline Base.@propagate_inbounds function TR(prices::Matrix{Float64})
@@ -101,11 +74,3 @@ end
 end
 
 @prep_miso ATR [High, Low, Close] n=14 ma_type=EMA
-
-# function ATR(ts::TSFrame, period::Int=14; field::Vector{Symbol}=[:High, :Low, :Close], ma_type::Symbol=:EMA)
-#     prices = ts[:,field] |> Matrix
-#     results = ATR(prices, period; ma_type=ma_type)
-#     col_name = :ATR
-#     return TSFrame(results, index(ts), colnames=[col_name])
-# end
-# export ATR

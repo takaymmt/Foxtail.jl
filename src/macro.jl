@@ -1,4 +1,31 @@
 """
+    apply_ma(data::Vector{Float64}, ma_type::Symbol; n::Int) -> Vector{Float64}
+
+Apply a moving average of the specified type to `data`.
+
+Supported `ma_type` values:
+- `:SMA`  — Simple Moving Average
+- `:EMA`  — Exponential Moving Average
+- `:SMMA` or `:RMA` — Smoothed Moving Average (Wilder's)
+- `:WMA`  — Weighted Moving Average
+
+Throws `ArgumentError` for unrecognized types.
+"""
+function apply_ma(data::Vector{Float64}, ma_type::Symbol; n::Int)::Vector{Float64}
+    if ma_type == :SMA
+        return SMA(data; n=n)
+    elseif ma_type == :EMA
+        return EMA(data; n=n)
+    elseif ma_type == :SMMA || ma_type == :RMA
+        return SMMA(data; n=n)
+    elseif ma_type == :WMA
+        return WMA(data; n=n)
+    else
+        throw(ArgumentError("Unknown ma_type: $ma_type. Valid options: :SMA, :EMA, :SMMA, :RMA, :WMA"))
+    end
+end
+
+"""
     process_args(args)
 
 Process macro arguments to generate keyword and call arguments for technical indicator wrapper functions.
@@ -55,10 +82,16 @@ A tuple of three elements:
 """
 function process_args(args)
     params = Dict{Any,Any}()
+
+    # kw_args  : keyword args for the wrapper signature  e.g. f(ts; n::Int=10, field::Symbol=:Close)
+    # call_args: keyword args forwarded to the core function  e.g. indicator(prices; n=n)
+    #            `field` is consumed by the wrapper (column selection) and never forwarded.
     kw_args = Expr[]
     call_args = Expr[]
 
-    # Parse arguments into params dictionary
+    # --- Argument Parsing ---
+    # Accept two input styles and normalise both into the `params` dict:
+    #   Direct: @prep_siso RSI n=14 field=:Close   |  Tuple: @prep_siso RSI (n=14, field=:Close)
     for arg in args
         if arg isa Expr && arg.head == :(=)
             params[arg.args[1]] = arg.args[2]
@@ -71,15 +104,23 @@ function process_args(args)
         end
     end
 
-    # Build keyword and call arguments
+    # --- Generate keyword / call args ---
     for (key, val) in params
         typ = typeof(val)
+
+        # Produces:  key::Type = default_value  (for the generated function signature)
+        # Symbol values need QuoteNode wrapping so they appear as :Foo, not Foo.
         if typ == Symbol
             push!(kw_args, Expr(:kw, Expr(:(::), esc(key), typ), QuoteNode(val)))
         else
             push!(kw_args, Expr(:kw, Expr(:(::), esc(key), typ), val))
         end
-        key == :field ||push!(call_args, Expr(:kw, esc(key), esc(key)))
+
+        # Produces:  key = key  (forwarded as keyword arg to the core function)
+        # `field` is consumed by the wrapper, so it is NOT forwarded.
+        if key != :field
+            push!(call_args, Expr(:kw, esc(key), esc(key)))
+        end
     end
 
     return params, kw_args, call_args
@@ -144,9 +185,20 @@ macro prep_siso(name, args...)
     typeof(name) == Symbol || error("First argument must be a function name")
 
     params, kw_args, call_args = process_args(args)
+
+    # Default `field` kwarg when the user didn't specify one
     haskey(params, :field) || push!(kw_args, Expr(:kw, Expr(:(::), esc(:field), Symbol), :(:Close)))
+
+    # Column name: "EMA_10" when `n` is present, otherwise just "EMA"
     colex = haskey(params, :n) ? Expr(:call, :Symbol, QuoteNode(name), QuoteNode(:_), :n) : QuoteNode(name)
 
+    # Generated code example (@prep_siso EMA n=10):
+    #   function EMA(ts::TSFrame; n::Int=10, field::Symbol=:Close)
+    #       prices = ts[:, field]
+    #       results = EMA(prices; n=n)
+    #       return TSFrame(results, index(ts), colnames=[:EMA_10])
+    #   end
+    #   export EMA
     return quote
         function $(esc(name))(ts::TSFrame; $(kw_args...))
             prices = ts[:, field]
@@ -214,6 +266,7 @@ end
 macro prep_miso(name, in, args...)
     typeof(name) == Symbol || error("First argument must be a function name")
 
+    # Convert [:High, :Low, :Close] literal into a quoted Symbol vector expression
     fields = if in.head == :vect
         Expr(:vect, [QuoteNode(x) for x in in.args]...)
     else
@@ -222,9 +275,20 @@ macro prep_miso(name, in, args...)
 
     params, kw_args, call_args = process_args(args)
     haskey(params, :fields) && error("fields keyword is not allowed")
+
+    # Add `fields` kwarg so the user can override which columns to read
     push!(kw_args, Expr(:kw, Expr(:(::), esc(:fields), Vector{Symbol}), fields))
+
+    # Column name: "ATR_14" when `n` is present, otherwise just "ATR"
     colex = haskey(params, :n) ? Expr(:call, :Symbol, QuoteNode(name), QuoteNode(:_), :n) : QuoteNode(name)
 
+    # Generated code example (@prep_miso ATR [:High, :Low, :Close] n=14):
+    #   function ATR(ts::TSFrame; n::Int=14, fields::Vector{Symbol}=[:High, :Low, :Close])
+    #       prices = ts[:, fields] |> Matrix
+    #       results = ATR(prices; n=n)
+    #       return TSFrame(results, index(ts), colnames=[:ATR_14])
+    #   end
+    #   export ATR
     return quote
         function $(esc(name))(ts::TSFrame; $(kw_args...))
             prices = ts[:, fields] |> Matrix
@@ -292,6 +356,7 @@ end
 macro prep_simo(name, out, args...)
     typeof(name) == Symbol || error("First argument must be a function name")
 
+    # Build output column names: [:BB_Upper, :BB_Middle, :BB_Lower]
     colvec = if out.head == :vect
         Expr(:vect, [QuoteNode(Symbol(name, :_, x)) for x in out.args]...)
     else
@@ -299,9 +364,17 @@ macro prep_simo(name, out, args...)
     end
 
     params, kw_args, call_args = process_args(args)
+
+    # Default `field` kwarg when the user didn't specify one
     haskey(params, :field) || push!(kw_args, Expr(:kw, Expr(:(::), esc(:field), Symbol), :(:Close)))
 
-
+    # Generated code example (@prep_simo BB [:Upper, :Middle, :Lower] n=20):
+    #   function BB(ts::TSFrame; n::Int=20, field::Symbol=:Close)
+    #       prices = ts[:, field]
+    #       results = BB(prices; n=n)
+    #       return TSFrame(results, index(ts), colnames=[:BB_Upper, :BB_Middle, :BB_Lower])
+    #   end
+    #   export BB
     return quote
         function $(esc(name))(ts::TSFrame; $(kw_args...))
             prices = ts[:, field]
@@ -366,12 +439,14 @@ end
 macro prep_mimo(name, in, out, args...)
     typeof(name) == Symbol || error("First argument must be a function name")
 
+    # Convert [:High, :Low, :Close] literal into a quoted Symbol vector expression
     fields = if in.head == :vect
         Expr(:vect, [QuoteNode(x) for x in in.args]...)
     else
         error("Second argument must be a vector of field names")
     end
 
+    # Build output column names: [:Stochastic_K, :Stochastic_D]
     colvec = if out.head == :vect
         Expr(:vect, [QuoteNode(Symbol(name, :_, x)) for x in out.args]...)
     else
@@ -379,10 +454,18 @@ macro prep_mimo(name, in, out, args...)
     end
 
     params, kw_args, call_args = process_args(args)
-    haskey(params, :fields) || haskey(params, :field) && error("'field' or 'fields' keyword is not allowed")
+    (haskey(params, :fields) || haskey(params, :field)) && error("'field' or 'fields' keyword is not allowed")
+
+    # Add `fields` kwarg so the user can override which columns to read
     push!(kw_args, Expr(:kw, Expr(:(::), esc(:fields), Vector{Symbol}), fields))
 
-
+    # Generated code example (@prep_mimo Stochastic [:High, :Low, :Close] [:K, :D] n=14):
+    #   function Stochastic(ts::TSFrame; n::Int=14, fields::Vector{Symbol}=[:High, :Low, :Close])
+    #       prices = ts[:, fields] |> Matrix
+    #       results = Stochastic(prices; n=n)
+    #       return TSFrame(results, index(ts), colnames=[:Stochastic_K, :Stochastic_D])
+    #   end
+    #   export Stochastic
     return quote
         function $(esc(name))(ts::TSFrame; $(kw_args...))
             prices = ts[:, fields] |> Matrix

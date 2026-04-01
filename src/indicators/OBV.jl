@@ -1,53 +1,40 @@
 """
-    OBV
-    OBV(ts::TSFrame; field::Vector{Symbol} = [:Close, :Volume]) -> TSFrame
+    OBV(data::Matrix{Float64}) -> Vector{Float64}
 
-On Balance Volume (OBV) is a momentum indicator that uses volume flow to predict changes in stock price.
+Calculate On Balance Volume (OBV) — a cumulative volume-based indicator that measures buying and selling pressure.
 
-## Basic Concept
-- Measures buying and selling pressure using volume
-- Assumes that volume precedes price movement
-- Cumulative indicator that adds volume on up days and subtracts it on down days
-- Created by Joe Granville and first introduced in his 1963 book "Granville's New Key to Stock Market Profits"
-
-## Parameters and Arguments
-- `ts::TSFrame`: Time series data frame containing price and volume data
-- `field::Vector{Symbol}`: (Default: [:Close, :Volume])
-  - Specifies the column names for price and volume data
-  - Must contain exactly two columns in order: [price, volume]
-  - Valid columns must exist in the TSFrame
+## Parameters
+- `data`: Price/volume matrix with 2 columns `[Close, Volume]` (`Float64`).
 
 ## Returns
-- `TSFrame`: New TSFrame containing:
-  - Same index as input TSFrame
-  - Single column [:OBV] with calculated OBV values
-  - First value initialized with the first period's volume
+Vector of OBV values. The first value equals the first period's volume.
 
-## Interpretation / Trading Signals
-- Rising OBV: Indicates buying pressure, potentially preceding price increases
-- Falling OBV: Suggests selling pressure, potentially preceding price decreases
-- OBV divergence from price: Possible trend reversal signal
-- Best used in conjunction with price action and other indicators
-- Most effective in trending markets
-
-## Usage Examples
-```julia
-Basic usage with default parameters
-obv = OBV(tsframe)
-Specifying custom price and volume columns
-obv = OBV(tsframe, field=[:AdjClose, :Volume])
-```
-
-## Core Formula
-The OBV is calculated by adding or subtracting each period's volume based on whether the closing price increased or decreased.
-
+## Formula
 ```math
-OBV_t = \begin{cases}
-OBV_{t-1} + Volume_t & \text{if } Close_t > Close_{t-1} \\
-OBV_{t-1} - Volume_t & \text{if } Close_t < Close_{t-1} \\
-OBV_{t-1} & \text{if } Close_t = Close_{t-1}
-\end{cases}
+OBV_t = \\begin{cases}
+OBV_{t-1} + V_t & \\text{if } C_t > C_{t-1} \\\\
+OBV_{t-1} - V_t & \\text{if } C_t < C_{t-1} \\\\
+OBV_{t-1} & \\text{if } C_t = C_{t-1}
+\\end{cases}
 ```
+
+## Interpretation
+- Rising OBV indicates buying pressure (accumulation), potentially preceding price increases.
+- Falling OBV indicates selling pressure (distribution), potentially preceding price decreases.
+- OBV divergence from price is a strong signal: if price makes new highs but OBV does not, distribution may be occurring.
+- OBV is a leading indicator — volume changes often precede price changes.
+- Most effective in trending markets; less meaningful during low-volume periods.
+- Created by: Joe Granville (1963, "Granville's New Key to Stock Market Profits").
+
+## Example
+```julia
+# data: [Close Volume]
+data = [100.0 1000.0; 102.0 1200.0; 101.0 800.0; 103.0 1500.0]
+result = OBV(data)
+```
+
+## See Also
+[`ADL`](@ref), [`ChaikinOsc`](@ref)
 """
 @inline Base.@propagate_inbounds function OBV(data::Matrix{Float64})
     if size(data, 2) != 2
@@ -79,11 +66,3 @@ OBV_{t-1} & \text{if } Close_t = Close_{t-1}
 end
 
 @prep_miso OBV [Close, Volume]
-
-# function OBV(ts::TSFrame; field::Vector{Symbol} = [:Close, :Volume])
-# 	data = ts[:, field] |> Matrix
-# 	results = OBV(data)
-# 	colnames = [:OBV]
-# 	return TSFrame(results, index(ts), colnames = colnames)
-# end
-# export OBV
