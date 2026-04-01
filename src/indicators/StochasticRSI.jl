@@ -1,34 +1,48 @@
 """
-    StochRSI(prices::Vector{Float64}; n::Int=14, k_smooth::Int=3, d_smooth::Int=3, ma_type::Symbol=:SMA)
+    StochRSI(prices::Vector{Float64}; n::Int=14, k_smooth::Int=3, d_smooth::Int=3, ma_type::Symbol=:SMA) -> Matrix{Float64}
 
-Calculates the Stochastic RSI (StochRSI) indicator, which combines the Relative Strength Index (RSI) with the Stochastic oscillator.
+Calculate Stochastic RSI — applies the Stochastic oscillator formula to RSI values instead of raw prices.
 
-# Arguments
-- `prices::Vector{Float64}`: Vector of price data
-- `n::Int=14`: Period for RSI calculation and stochastic window
-- `k_smooth::Int=3`: Smoothing period for %K line
-- `d_smooth::Int=3`: Smoothing period for %D line (signal line)
-- `ma_type::Symbol=:SMA`: Type of moving average to use. Options: `:SMA`, `:EMA`, `:SMMA`/`:RMA`, `:WMA`
+## Parameters
+- `prices`: Input price vector (`Float64`).
+- `n`: Period for both the RSI calculation and the stochastic lookback window (default: 14). Valid range: `n >= 1`.
+- `k_smooth`: Smoothing period for %K line (default: 3). Valid range: `k_smooth >= 1`.
+- `d_smooth`: Smoothing period for %D signal line (default: 3). Valid range: `d_smooth >= 1`.
+- `ma_type`: Moving average type for smoothing (default: `:SMA`).
+  Options: `:SMA`, `:EMA`, `:SMMA`/`:RMA`, `:WMA`.
 
-# Returns
-- `Matrix{Float64}`: A matrix with two columns:
-  - Column 1: Stochastic RSI %K line (smoothed)
-  - Column 2: Stochastic RSI %D line (signal line)
+## Returns
+Matrix of size `(length(prices), 2)`:
+- Column 1: StochRSI %K line (smoothed)
+- Column 2: StochRSI %D line (signal)
 
-# Notes
-- The StochRSI applies the stochastic formula to RSI values instead of price data
-- Values are normalized between 0 and 100
-- Default to 50 when the RSI range is zero to avoid division by zero
-- Requires at least `2n` data points due to both RSI and Stochastic calculations
+Requires input length >= `2n`.
 
-# Example
-```julia
-prices = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
-result = StochRSI(prices)
-result = StochRSI(prices; n=4, k_smooth=2, d_smooth=2, ma_type=:SMA)
-# result[:,1] contains StochRSI %K line
-# result[:,2] contains StochRSI %D line
+## Formula
+```math
+RSI_t = \\text{RSI}(P, n)_t, \\quad
+StochRSI_t = 100 \\times \\frac{RSI_t - \\min(RSI, n)}{\\max(RSI, n) - \\min(RSI, n)}
 ```
+
+%K and %D are then obtained by smoothing StochRSI with the specified moving average.
+
+## Interpretation
+- Combines the momentum measurement of RSI with the sensitivity of the Stochastic oscillator.
+- More sensitive and volatile than standard RSI; generates signals more frequently.
+- Oscillates between 0 and 100.
+- Overbought: >= 80; Oversold: <= 20.
+- %K/%D crossovers provide entry/exit signals similar to standard Stochastic.
+- Created by: Tushar Chande and Stanley Kroll (1994).
+
+## Example
+```julia
+prices = [100.0, 102.0, 101.0, 103.0, 105.0, 104.0, 106.0, 108.0]
+result = StochRSI(prices; n=4, k_smooth=2, d_smooth=2)
+# result[:,1] = %K, result[:,2] = %D
+```
+
+## See Also
+[`RSI`](@ref), [`Stoch`](@ref)
 """
 @inline Base.@propagate_inbounds function StochRSI(prices::Vector{Float64}; n::Int=14, k_smooth::Int=3, d_smooth::Int=3, ma_type::Symbol=:SMA)
     period = n
@@ -82,30 +96,10 @@ result = StochRSI(prices; n=4, k_smooth=2, d_smooth=2, ma_type=:SMA)
 	end
 
     # Apply smoothing to get Stochastic %K
-    if ma_type == :SMA
-        stoch_k = SMA(raw_k; n=k_smooth)
-    elseif ma_type == :EMA
-        stoch_k = EMA(raw_k; n=k_smooth)
-    elseif ma_type == :SMMA || ma_type == :RMA
-        stoch_k = SMMA(raw_k; n=k_smooth)
-    elseif ma_type == :WMA
-        stoch_k = WMA(raw_k; n=k_smooth)
-    else
-        throw(ArgumentError("ma_type must be one of: :SMA, :EMA, :SMMA, :WMA"))
-    end
+    stoch_k = apply_ma(raw_k, ma_type; n=k_smooth)
 
     # Calculate %D by smoothing %K
-    if ma_type == :SMA
-        stoch_d = SMA(stoch_k; n=d_smooth)
-    elseif ma_type == :EMA
-        stoch_d = EMA(stoch_k; n=d_smooth)
-    elseif ma_type == :SMMA || ma_type == :RMA
-        stoch_d = SMMA(stoch_k; n=d_smooth)
-    elseif ma_type == :WMA
-        stoch_d = WMA(stoch_k; n=d_smooth)
-    else
-        throw(ArgumentError("ma_type must be one of: :SMA, :EMA, :SMMA, :WMA"))
-    end
+    stoch_d = apply_ma(stoch_k, ma_type; n=d_smooth)
 
     return hcat(stoch_k, stoch_d)
 end

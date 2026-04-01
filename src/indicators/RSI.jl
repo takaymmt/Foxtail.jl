@@ -1,35 +1,43 @@
 """
     RSI(prices::Vector{Float64}; n::Int=14, ma_type::Symbol=:SMMA) -> Vector{Float64}
 
-A momentum oscillator that measures the speed and magnitude of recent price changes to evaluate overbought or oversold conditions.
+Calculate Relative Strength Index (RSI) — a momentum oscillator measuring the speed and magnitude of price changes.
 
 ## Parameters
-- `prices`: Vector of price values
-- `n`: Period for calculation (default: 14)
-- `ma_type`: Moving average type for smoothing (`:SMMA`, `:EMA`, or `:SMA`, default: `:SMMA`)
+- `prices`: Input price vector (`Float64`).
+- `n`: Lookback period for gain/loss smoothing (default: 14). Valid range: `n >= 1`.
+- `ma_type`: Moving average type for smoothing gains and losses (default: `:SMMA`).
+  Options: `:SMMA` (Wilder's original), `:EMA`, `:SMA`.
 
 ## Returns
-- Vector of RSI values, where the first value is 0 (undefined)
+Vector of RSI values (0-100 scale). The first value is `0.0` (undefined).
+Requires input length > `n + 1`.
 
-## Implementation Details
-1. Calculates price changes between consecutive periods
-2. Separates gains (positive changes) and losses (negative changes)
-3. Applies specified moving average to both gains and losses
-4. Computes RS (Relative Strength) as ratio of smoothed gains to losses
-5. Transforms RS into RSI using formula: RSI = 100 - (100 / (1 + RS))
+## Formula
+```math
+RS_t = \\frac{MA(\\text{gains}, n)_t}{MA(\\text{losses}, n)_t}, \\quad
+RSI_t = 100 - \\frac{100}{1 + RS_t}
+```
+
+Where gains and losses are separated from price changes: `delta_t = P_t - P_{t-1}`.
+
+## Interpretation
+- Oscillates between 0 and 100.
+- Overbought: RSI >= 70 (potential reversal downward or strong uptrend).
+- Oversold: RSI <= 30 (potential reversal upward or strong downtrend).
+- Centerline (50) crossover can confirm trend direction.
+- Divergence between RSI and price often signals a pending reversal.
+- Created by: J. Welles Wilder Jr. (1978).
 
 ## Example
 ```julia
 prices = [100.0, 102.0, 101.0, 103.0, 102.0, 103.0]
-rsi = RSI(prices)  # Uses default n=14, ma_type=:SMMA
-rsi = RSI(prices; n=10, ma_type=:EMA)  # Custom parameters
+rsi = RSI(prices)                         # Default: n=14, ma_type=:SMMA
+rsi = RSI(prices; n=10, ma_type=:EMA)     # Custom parameters
 ```
 
-## Notes
-- Requires price series length > period + 1
-- First value is set to 0 as it's undefined
-- Supports three moving average types: SMMA (default), EMA, and SMA
-- Traditional interpretation levels: ≥70 overbought, ≤30 oversold
+## See Also
+[`StochRSI`](@ref), [`SMMA`](@ref), [`MACD`](@ref)
 """
 @inline Base.@propagate_inbounds function RSI(prices::Vector{Float64}; n::Int=14, ma_type::Symbol=:SMMA)
     period = n
@@ -52,16 +60,8 @@ rsi = RSI(prices; n=10, ma_type=:EMA)  # Custom parameters
     end
 
     # Calculate RS (Relative Strength)
-    if ma_type == :SMMA
-        gains = SMMA(gains; n=period)
-        losses = SMMA(losses; n=period)
-    elseif ma_type == :EMA
-        gains = EMA(gains; n=period)
-        losses = EMA(losses; n=period)
-    else  # Simple moving average
-        gains = SMA(gains; n=period)
-        losses = SMA(losses; n=period)
-    end
+    gains = apply_ma(gains, ma_type; n=period)
+    losses = apply_ma(losses, ma_type; n=period)
 
     rs = gains ./ losses
 
