@@ -174,7 +174,7 @@ end
 	return n
 end
 
-isfull(cb::CircBuff) = cb._length == cb.capacity
+Base.isfull(cb::CircBuff) = cb._length == cb.capacity
 capacity(cb::CircBuff) = cb.capacity
 value(cb::CircBuff) = view(cb.buffer, _buf_idx(cb, 1:cb._length))
 
