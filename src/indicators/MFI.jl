@@ -81,7 +81,6 @@ result = MFI(prices; n=2)
             neg_mf[j] = mf[j]
         end
         # tp[j] == tp[j-1]: both remain 0.0 (neutral)
-        # Note: j == 1 is not reached here; pos_mf[1]/neg_mf[1] stay 0.0 from initialization
     end
 
     pos_flow = 0.0

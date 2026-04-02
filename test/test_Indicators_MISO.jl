@@ -399,7 +399,7 @@ data_ts = aapl[end-100:end]
         mfi_constant = repeat([105.0  103.0  104.0  1_000_000.0], 10, 1)
         result_const = MFI(mfi_constant; n=5)
         # When both pos and neg flow are zero, Foxtail returns 100.0 (neutral convention)
-        @test !any(isnan, result_const) && !any(isinf, result_const)
+        @test all(isfinite, result_const)
         @test all(result_const .== 100.0)
 
         # AAPL smoke test
@@ -701,7 +701,7 @@ data_ts = aapl[end-100:end]
             103.5  101.5  1_100_000.0;
         ]
         result_flat = EMV(emv_flat_hl; n=2)
-        @test !any(isnan, result_flat) && !any(isinf, result_flat)
+        @test all(isfinite, result_flat)
 
         # Edge case: Volume == 0 → box_ratio = 0 → raw_emv should be 0.0
         emv_zero_vol = [
@@ -712,7 +712,7 @@ data_ts = aapl[end-100:end]
             104.5  102.5  1_100_000.0;
         ]
         result_zvol = EMV(emv_zero_vol; n=2)
-        @test !any(isnan, result_zvol) && !any(isinf, result_zvol)
+        @test all(isfinite, result_zvol)
 
         # AAPL smoke test (data_ts has High, Low, Volume columns)
         emv_aapl = EMV(data_ts)
