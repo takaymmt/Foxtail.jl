@@ -5,7 +5,11 @@ tests = [
     "CircBuff",
     "CircDeque",
     "MinMaxQueue",
-    "Indicators"
+    "Indicators_SISO",
+    "Indicators_MISO",
+    "Indicators_SIMO",
+    "Indicators_MIMO",
+    "Indicators_AAPL",
 ]
 
 @testset "Foxtail.jl" begin
