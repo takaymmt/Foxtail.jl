@@ -1,5 +1,3 @@
-using Dates
-
 """
     AnchoredVWAP(data::Matrix{Float64}; anchor::Int=1) -> Vector{Float64}
 
@@ -47,22 +45,7 @@ result = AnchoredVWAP(data; anchor=2)  # VWAP starting from row 2
 
     n = size(data, 1)
     results = fill(NaN, n)
-
-    highs   = @view data[:, 1]
-    lows    = @view data[:, 2]
-    closes  = @view data[:, 3]
-    volumes = @view data[:, 4]
-
-    cum_tpv = 0.0
-    cum_v   = 0.0
-
-    @inbounds for i in anchor:n
-        tp = (highs[i] + lows[i] + closes[i]) / 3.0
-        cum_tpv += tp * volumes[i]
-        cum_v   += volumes[i]
-        results[i] = cum_v == 0.0 ? 0.0 : cum_tpv / cum_v
-    end
-
+    _cumulative_vwap!(results, data, anchor)
     return results
 end
 
@@ -81,11 +64,7 @@ function _anchored_vwap_resolve(ts::TSFrame, anchor::Union{Int, Dates.TimeType})
         end
         return idx
     else
-        n = nrow(ts)
-        if anchor < 1 || anchor > n
-            throw(ArgumentError("anchor must be between 1 and the number of rows (got $anchor for $n rows)"))
-        end
-        return anchor
+        return anchor  # range validated by AnchoredVWAP(::Matrix)
     end
 end
 

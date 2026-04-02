@@ -32,6 +32,23 @@ result = VWAP(data)
 ## See Also
 [`OBV`](@ref), [`ADL`](@ref)
 """
+# Shared helper: cumulative VWAP from row `from` onward, writing into pre-allocated `results`.
+# Pre-`from` entries in `results` are left untouched (caller sets them to zeros or NaN).
+@inline function _cumulative_vwap!(results::Vector{Float64}, data::Matrix{Float64}, from::Int)
+    highs   = @view data[:, 1]
+    lows    = @view data[:, 2]
+    closes  = @view data[:, 3]
+    volumes = @view data[:, 4]
+    cum_tpv = 0.0
+    cum_v   = 0.0
+    @inbounds for i in from:length(results)
+        tp = (highs[i] + lows[i] + closes[i]) / 3.0
+        cum_tpv += tp * volumes[i]
+        cum_v   += volumes[i]
+        results[i] = iszero(cum_v) ? 0.0 : cum_tpv / cum_v
+    end
+end
+
 @inline Base.@propagate_inbounds function VWAP(data::Matrix{Float64})
     if size(data, 2) != 4
         throw(ArgumentError("data matrix must have 4 columns [High Low Close Volume]"))
@@ -39,22 +56,7 @@ result = VWAP(data)
 
     n = size(data, 1)
     results = zeros(n)
-
-    highs   = @view data[:, 1]
-    lows    = @view data[:, 2]
-    closes  = @view data[:, 3]
-    volumes = @view data[:, 4]
-
-    cum_tpv = 0.0
-    cum_v   = 0.0
-
-    @inbounds for i in 1:n
-        tp = (highs[i] + lows[i] + closes[i]) / 3.0
-        cum_tpv += tp * volumes[i]
-        cum_v   += volumes[i]
-        results[i] = cum_v == 0.0 ? 0.0 : cum_tpv / cum_v
-    end
-
+    _cumulative_vwap!(results, data, 1)
     return results
 end
 
