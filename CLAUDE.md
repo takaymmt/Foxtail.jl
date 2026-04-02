@@ -70,24 +70,10 @@
 - 既存ルールは `.claude/rules/` を最優先で参照
 - 研究メモは `.claude/docs/research/` に蓄積（テンプレート配布時は空を維持）
 
-## Session History
-
-### 2026-04-01
-- 1 commit (`dd32c67`), 29 files, +3313/-15 lines
-- Agent Teams: Researcher (market survey) + Architect (codebase analysis) parallel
-- **17 indicators added** (TDD, 2932→3702 tests): ROC, DonchianChannel, KeltnerChannel, Supertrend, DMI/ADX, VWAP, CCI, PPO, ForceIndex, MFI, CMF, Aroon, VPT, NVI, PVI, SqueezeMomentum, ParabolicSAR, Ichimoku, KST, DPO, EMV
-- MinMaxQueue: `get_max_idx`/`get_min_idx` 追加
-- Key decisions: macro.jl 変更不要、Ichimoku は手書きラッパーで N+26 行出力、VIX はスコープ外
-- Remaining: Pivot Points ★★★★, Connors RSI ★★★, Vortex ★★, Ultimate Oscillator ★★, Mass Index ★
-
-### 2026-04-02
-- 8 commits, 36 files, +5963/-1859 lines
-- Agent Teams: 4チーム計11メイト（team-review×2, team-implement×2）
-- **テスト強化** (3702→4115本): ゼロ除算ガード(ROC/VPT/NVI/PVI/PPO)、MFI/CMF O(n)最適化、EMV定数化
-- **テスト分割**: test_Indicators.jl(1849行) → SISO/MISO/SIMO/MIMO/AAPL の5ファイルへ
-- **AAPL統合テスト**: 2023-03-01〜2024-06-28(335行)、既知値回帰・不変条件・カナリアアサーション
-- **docs更新**: indicator-reference.md を24→45指標、6カテゴリ（Moving Averages/Trend/Momentum/Oscillators/Volume/Volatility）に再編
-- Key decisions: rand()→固定配列(OptionB)、TSFrameラッパーテストはAAPLから除去、@test all()でカウント正規化
+## Current State（最終更新: 2026-04-02）
+- テスト数: 4,115本（全通過）
+- 実装済み指標: 45指標（`docs/indicator-reference.md` 参照）
+- 次の候補: Pivot Points ★★★★, Connors RSI ★★★, Vortex ★★, Ultimate Oscillator ★★, Mass Index ★
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # @orchestra:local-boundary
