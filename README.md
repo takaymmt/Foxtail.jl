@@ -6,7 +6,7 @@ A high-performance Julia library for technical analysis indicators using **onlin
 
 ## Features
 
-- **50 technical indicators** across 7 categories (moving averages, trend, momentum, oscillators, volume, volatility, pivot points)
+- **51 technical indicators** across 7 categories (moving averages, trend, momentum, oscillators, volume, volatility, pivot points)
 - **Online algorithm design** -- incremental computation using circular buffers for O(1) per-bar updates
 - **TSFrames integration** -- accepts `TSFrame` input and returns properly named `TSFrame` output
 - **4,100+ tests** with comprehensive edge case coverage
@@ -117,11 +117,12 @@ pivots = PivotPoints(ts; method=:Classic)
 | WR | Williams %R |
 | SqueezeMomentum | TTM Squeeze Momentum |
 
-### Volume Indicators (11)
+### Volume Indicators (12)
 
 | Indicator | Description |
 |-----------|-------------|
 | ADL | Accumulation/Distribution Line |
+| AnchoredVWAP | Anchored Volume Weighted Average Price |
 | ChaikinOsc | Chaikin Oscillator |
 | CMF | Chaikin Money Flow |
 | EMV | Ease of Movement |

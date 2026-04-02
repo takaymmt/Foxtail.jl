@@ -54,7 +54,7 @@
 
 ### 指標追加（docs改善後に再検討）
 
-- [ ] **Anchored VWAP** ★★★ — 唯一の実需ギャップ。docs改善後に需要を再評価してから着手
+- [x] **Anchored VWAP** ✅ 2026-04-02 — raw fn + TSFrame wrapper (anchor::Union{Int,Dates.TimeType}), 4570 tests passing
 - [ ] **TRIX** ★★ — ニッチ。後回し可
 - [ ] **TSI (True Strength Index)** ★★ — ニッチ。後回し可
 - [ ] **Coppock Curve** ★ — ニッチ。後回し可

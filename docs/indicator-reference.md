@@ -1,6 +1,6 @@
 # Foxtail.jl Indicator Reference
 
-Complete reference for all 50 technical indicators in Foxtail.jl.
+Complete reference for all 51 technical indicators in Foxtail.jl.
 
 ## Summary Table
 
@@ -74,20 +74,21 @@ Complete reference for all 50 technical indicators in Foxtail.jl.
 | 44 | [PVI](#pvi) | MISO | Positive Volume Index | *(none)* | `PVI` |
 | 45 | [VPT](#vpt) | MISO | Volume Price Trend | *(none)* | `VPT` |
 | 46 | [VWAP](#vwap) | MISO | Volume Weighted Average Price | *(none)* | `VWAP` |
+| 47 | [AnchoredVWAP](#anchoredvwap) | MISO | Anchored Volume Weighted Average Price | `anchor` (required) | `AnchoredVWAP` |
 
 ### Volatility Indicators
 
 | # | Indicator | Type | Description | Key Parameters | Output Columns |
 |---|-----------|------|-------------|----------------|----------------|
-| 47 | [ATR](#atr) | MISO | Average True Range | `n=14`, `ma_type=:EMA` | `ATR_n` |
-| 48 | [BB](#bb) | SIMO | Bollinger Bands | `n=14`, `num_std=2.0`, `ma_type=:SMA` | `BB_Center`, `BB_Upper`, `BB_Lower` |
-| 49 | [MassIndex](#massindex) | MISO | Mass Index | `n=25`, `ema_period=9` | `MassIndex` |
+| 48 | [ATR](#atr) | MISO | Average True Range | `n=14`, `ma_type=:EMA` | `ATR_n` |
+| 49 | [BB](#bb) | SIMO | Bollinger Bands | `n=14`, `num_std=2.0`, `ma_type=:SMA` | `BB_Center`, `BB_Upper`, `BB_Lower` |
+| 50 | [MassIndex](#massindex) | MISO | Mass Index | `n=25`, `ema_period=9` | `MassIndex` |
 
 ### Pivot Points
 
 | # | Indicator | Type | Description | Key Parameters | Output Columns |
 |---|-----------|------|-------------|----------------|----------------|
-| 50 | [PivotPoints](#pivotpoints) | MIMO | Pivot Points | `method=:Classic` | `PivotPoints_Pivot`, `_R1`, `_R2`, `_R3`, `_S1`, `_S2`, `_S3` |
+| 51 | [PivotPoints](#pivotpoints) | MIMO | Pivot Points | `method=:Classic` | `PivotPoints_Pivot`, `_R1`, `_R2`, `_R3`, `_S1`, `_S2`, `_S3` |
 
 **Type legend**: SISO = Single Input Single Output, MISO = Multiple Input Single Output, SIMO = Single Input Multiple Output, MIMO = Multiple Input Multiple Output.
 
@@ -1237,7 +1238,35 @@ VWAP(ts)               # no parameters needed
 - Commonly used by institutional traders for execution benchmarking.
 - This implementation is cumulative across the entire series (not session-reset).
 
-**See Also**: [`OBV`](#obv), [`ADL`](#adl), [`MFI`](#mfi)
+**See Also**: [`OBV`](#obv), [`ADL`](#adl), [`MFI`](#mfi), [`AnchoredVWAP`](#anchoredvwap)
+
+---
+
+### AnchoredVWAP
+
+**Anchored Volume Weighted Average Price** -- a VWAP that begins cumulation from a user-specified anchor bar, useful for measuring the average price paid since a significant market event.
+
+| Property | Value |
+|----------|-------|
+| Type | MISO |
+| Raw signature | `AnchoredVWAP(data::Matrix{Float64}; anchor::Int=1) -> Vector{Float64}` |
+| Input fields | `[:High, :Low, :Close, :Volume]` (configurable via `fields`) |
+| Parameters | `anchor` (required: row index or Date/DateTime) |
+| Output columns | `AnchoredVWAP` |
+
+```julia
+AnchoredVWAP(ts; anchor=100)                     # anchor by row index
+AnchoredVWAP(ts; anchor=Date(2023, 7, 24))       # anchor by date
+```
+
+**Notes**:
+- AnchoredVWAP = Cumulative(TP * Volume) / Cumulative(Volume) starting from the anchor bar, where TP = (High + Low + Close) / 3.
+- Rows before the anchor are `NaN`.
+- When `anchor=1`, the result is identical to `VWAP`.
+- The TSFrame wrapper accepts both `Int` (row index) and `Date`/`DateTime` (looked up in the index).
+- Commonly used to assess price relative to a key event (earnings, breakout, IPO).
+
+**See Also**: [`VWAP`](#vwap), [`OBV`](#obv), [`ADL`](#adl)
 
 ---
 
@@ -1395,6 +1424,7 @@ OBV ──── (cumulative volume by price direction)
 VPT ──── (cumulative volume weighted by price change)
 NVI/PVI ─ (price change on decreasing/increasing volume days)
 VWAP ─── (cumulative TP*Volume / Volume)
+AnchoredVWAP ── (VWAP from user-specified anchor bar)
 MFI  ─── (volume-weighted RSI using Money Flow)
 ForceIndex ── (EMA of price-change * volume)
 EMV  ─── (SMA of distance moved / box ratio)
@@ -1428,7 +1458,7 @@ PivotPoints ────── (P/R1-R3/S1-S3 from HLCO; 5 methods)
 | `:High`, `:Low` | Aroon, ParabolicSAR, MassIndex |
 | `:High`, `:Low`, `:Close` | ATR, Stoch, WR, DonchianChannel, KeltnerChannel, Supertrend, DMI, Ichimoku, SqueezeMomentum, CCI, UltimateOsc, Vortex |
 | `:High`, `:Low`, `:Volume` | EMV |
-| `:High`, `:Low`, `:Close`, `:Volume` | ADL, ChaikinOsc, CMF, MFI, VWAP |
+| `:High`, `:Low`, `:Close`, `:Volume` | ADL, AnchoredVWAP, ChaikinOsc, CMF, MFI, VWAP |
 | `:High`, `:Low`, `:Close`, `:Open` | PivotPoints |
 
 ---

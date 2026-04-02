@@ -222,6 +222,62 @@ data_ts = aapl[end-100:end]
         @test_throws ArgumentError VWAP(rand(10, 3))  # wrong column count
     end
 
+    @testset "AnchoredVWAP" begin
+        # 1. Basic type checks
+        @test AnchoredVWAP(vec4; anchor=1) isa Vector{Float64}
+        res_ts = AnchoredVWAP(data_ts; anchor=1)
+        @test res_ts isa TSFrame
+        @test names(res_ts)[1] == "AnchoredVWAP"
+
+        # 2. anchor=1 parity: must exactly match VWAP
+        @test AnchoredVWAP(vec4; anchor=1) == VWAP(vec4)
+
+        # 3. Pre-anchor NaN, post-anchor finite
+        r_anchor3 = AnchoredVWAP(vec4; anchor=3)
+        @test all(isnan, r_anchor3[1:2])
+        @test all(isfinite, r_anchor3[3:end])
+
+        # 4. Numerical accuracy (hand-calculated)
+        #    5-row fixed data, anchor=3
+        avwap_data = Float64[10 8 9 1000; 12 10 11 2000; 14 12 13 3000; 16 14 15 4000; 18 16 17 5000]
+        r = AnchoredVWAP(avwap_data; anchor=3)
+        # rows 1-2: NaN
+        @test isnan(r[1])
+        @test isnan(r[2])
+        # row 3: TP3=(14+12+13)/3=13; AVWAP=13*3000/3000=13.0
+        @test r[3] ≈ 13.0 atol=1e-10
+        # row 4: TP4=(16+14+15)/3=15; cum_tpv=13*3000+15*4000=99000; cum_v=7000
+        @test r[4] ≈ 99000.0 / 7000.0 atol=1e-10
+        # row 5: TP5=(18+16+17)/3=17; cum_tpv=99000+17*5000=184000; cum_v=12000
+        @test r[5] ≈ 184000.0 / 12000.0 atol=1e-10
+
+        # Verify: anchor=3 result[3:5] matches VWAP on rows 3:5 slice
+        vwap_slice = VWAP(avwap_data[3:5, :])
+        @test r[3:5] ≈ vwap_slice atol=1e-10
+
+        # 5. Last-row anchor
+        n_rows = size(vec4, 1)
+        r_last = AnchoredVWAP(vec4; anchor=n_rows)
+        @test all(isnan, r_last[1:n_rows-1])
+        # Last row: just the typical price
+        tp_last = (vec4[n_rows, 1] + vec4[n_rows, 2] + vec4[n_rows, 3]) / 3.0
+        @test r_last[n_rows] ≈ tp_last atol=1e-10
+
+        # 6. TSFrame wrapper: anchor::Int and anchor::Date give the same result
+        anchor_row = 5
+        anchor_date = TSFrames.index(data_ts)[anchor_row]
+        res_int = AnchoredVWAP(data_ts; anchor=anchor_row)
+        res_date = AnchoredVWAP(data_ts; anchor=anchor_date)
+        @test isequal(Matrix(res_int), Matrix(res_date))
+
+        # 7. Error cases
+        @test_throws ArgumentError AnchoredVWAP(vec4; anchor=0)          # anchor=0
+        @test_throws ArgumentError AnchoredVWAP(vec4; anchor=n_rows+1)   # anchor > nrow
+        @test_throws ArgumentError AnchoredVWAP(rand(10, 3); anchor=1)   # wrong column count
+        @test_throws ArgumentError AnchoredVWAP(Matrix{Float64}(undef, 0, 4); anchor=1)  # empty matrix
+        @test_throws ArgumentError AnchoredVWAP(data_ts; anchor=Date(1900, 1, 1))  # date not found
+    end
+
     @testset "CCI" begin
         @test CCI(vec3) isa Vector{Float64}
         @test CCI(vec3; n=10) isa Vector{Float64}

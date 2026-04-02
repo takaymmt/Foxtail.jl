@@ -61,6 +61,7 @@ Claude Code Orchestra is a multi-agent collaboration framework. Claude Code is t
 
 | Decision | Rationale | Alternatives Considered | Date |
 |----------|-----------|------------------------|------|
+| AnchoredVWAP will use a raw function `AnchoredVWAP(data::Matrix{Float64}; anchor_idx::Int=1)` plus a hand-written `TSFrame` wrapper accepting `anchor::Union{Date,Int}` | Matches existing `VWAP` raw API shape, keeps date-to-row resolution in the wrapper where `@prep_miso` cannot help, and follows the custom-wrapper precedent already established by `Ichimoku` | Extending `@prep_miso` for wrapper-consumed params; slicing data externally before calling `VWAP`; using `anchor::Union{Date,Int}` in the raw function | 2026-04-02 |
 | Foxtail.jl prioritization: documentation-first with 80/20 docs-to-indicators split | Current indicator set covers all top-20 professional indicators and 7/10 major workflows fully; outdated/incomplete docs are the primary adoption bottleneck and have higher ROI than specialist indicators | Indicator-first expansion, equal split, hybrid with docs leading | 2026-04-02 |
 | Gemini role expanded to codebase analysis + research + multimodal | Gemini CLI has native 1M context; Claude Code is 200K; delegate large-context tasks to Gemini | Keep Claude for codebase analysis (requires 1M Beta) | 2026-02-19 |
 | All subagents default to Opus | 200K context makes quality of reasoning more important than context size; Opus provides better output | Sonnet (cheaper but 200K same as Opus, weaker reasoning) | 2026-02-19 |
@@ -93,6 +94,8 @@ Claude Code Orchestra is a multi-agent collaboration framework. Claude Code is t
 
 | Date | Changes |
 |------|---------|
+| 2026-04-02 | Added AnchoredVWAP implementation sequencing note: use TDD with test stubs first, then raw function, then manual `TSFrame` wrapper, then regression/integration coverage, with each step independently verifiable |
+| 2026-04-02 | Recorded AnchoredVWAP architecture: raw function with `anchor_idx::Int=1`, manual `TSFrame` wrapper for `anchor::Union{Date,Int}`, pre-anchor `NaN`, and parity requirement with `VWAP(data)` when `anchor==1` |
 | 2026-04-02 | Recorded Foxtail.jl prioritization decision: documentation-first, target 80/20 docs-to-indicators split based on spike findings |
 | 2026-04-01 | TSFrames.jl: switch from public registry to takaymmt/TSFrames.jl fork via `Pkg.add(url=..., rev="main")` |
 | 2026-03-14 | Gemini narrowed to multimodal-only; research/analysis delegated to Opus subagents (1M context) |

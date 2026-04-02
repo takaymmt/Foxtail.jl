@@ -351,6 +351,39 @@ using CSV
         @test vwap[end-2:end] ≈ expected_last3 atol=1e-6
     end
 
+    @testset "AAPL: AnchoredVWAP" begin
+        # Output length and index match input
+        avwap1 = AnchoredVWAP(hlcv; anchor=1)
+        @test length(avwap1) == nrows
+
+        avwap_ts = AnchoredVWAP(aapl; anchor=1)
+        @test nrow(avwap_ts) == nrows
+        @test TSFrames.index(avwap_ts) == TSFrames.index(aapl)
+
+        # anchor=1 must match VWAP exactly
+        vwap = VWAP(hlcv)
+        @test avwap1 == vwap
+
+        # Mid-range anchor: pre-anchor all NaN, post-anchor all finite
+        anchor_mid = 100
+        avwap_mid = AnchoredVWAP(hlcv; anchor=anchor_mid)
+        @test all(isnan, avwap_mid[1:anchor_mid-1])
+        @test all(isfinite, avwap_mid[anchor_mid:end])
+
+        # Anchor by date (row 100) gives same result as anchor by Int
+        anchor_date = TSFrames.index(aapl)[anchor_mid]
+        avwap_int_ts = AnchoredVWAP(aapl; anchor=anchor_mid)
+        avwap_date_ts = AnchoredVWAP(aapl; anchor=anchor_date)
+        @test isequal(Matrix(avwap_int_ts), Matrix(avwap_date_ts))
+
+        # Post-anchor range: within [min(Low), max(High)] of the anchor window
+        for i in anchor_mid:nrows
+            min_low = minimum(lows[anchor_mid:i])
+            max_high = maximum(highs[anchor_mid:i])
+            @test min_low <= avwap_mid[i] <= max_high
+        end
+    end
+
     @testset "AAPL: ForceIndex" begin
         fi = ForceIndex(cv)
         @test length(fi) == nrows
