@@ -55,7 +55,7 @@ function PPO(prices::Vector{Float64}; fast::Int = 12, slow::Int = 26, signal::In
     slow_ema = EMA(prices; n=slow)
 
     # Calculate PPO line (percentage difference)
-    ppo_line = @. (fast_ema - slow_ema) / slow_ema * 100
+    ppo_line = @. ifelse(iszero(slow_ema), 0.0, (fast_ema - slow_ema) / slow_ema * 100)
 
     # Calculate signal line
     signal_line = EMA(ppo_line; n=signal)

@@ -70,20 +70,31 @@ result = MFI(prices; n=2)
         mf[i] = tp[i] * volumes[i]
     end
 
-    @inbounds for i in 1:nrows
-        pos_flow = 0.0
-        neg_flow = 0.0
-        start = max(1, i - n + 1)
+    # Pre-classify each bar's money flow as positive or negative
+    pos_mf = zeros(nrows)
+    neg_mf = zeros(nrows)
 
-        for j in start:i
-            if j == 1 || tp[j] == tp[j-1]
-                # First bar (no previous TP) or neutral (TP unchanged): skip
-                continue
-            elseif tp[j] > tp[j-1]
-                pos_flow += mf[j]
-            else
-                neg_flow += mf[j]
-            end
+    @inbounds for j in 2:nrows
+        if tp[j] > tp[j-1]
+            pos_mf[j] = mf[j]
+        elseif tp[j] < tp[j-1]
+            neg_mf[j] = mf[j]
+        end
+        # tp[j] == tp[j-1] or j == 1: both remain 0.0 (neutral)
+    end
+
+    pos_flow = 0.0
+    neg_flow = 0.0
+
+    @inbounds for i in 1:nrows
+        # Add the new element entering the window
+        pos_flow += pos_mf[i]
+        neg_flow += neg_mf[i]
+
+        # Subtract the element leaving the window
+        if i > n
+            pos_flow -= pos_mf[i - n]
+            neg_flow -= neg_mf[i - n]
         end
 
         if neg_flow == 0.0 && pos_flow == 0.0

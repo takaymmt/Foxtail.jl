@@ -36,6 +36,8 @@ result = EMV(prices; n=14)
 ## See Also
 [`OBV`](@ref), [`ADL`](@ref)
 """
+const EMV_BOX_RATIO_SCALE = 100_000_000.0  # Arms' scaling factor for volume normalization
+
 @inline Base.@propagate_inbounds function EMV(prices::Matrix{Float64}; n::Int=14)
     len = size(prices, 1)
 
@@ -53,7 +55,7 @@ result = EMV(prices; n=14)
         if hl_diff == 0.0
             raw_emv[i] = 0.0
         else
-            box_ratio = (vol[i] / 100_000_000.0) / hl_diff
+            box_ratio = (vol[i] / EMV_BOX_RATIO_SCALE) / hl_diff
             if box_ratio == 0.0
                 raw_emv[i] = 0.0
             else

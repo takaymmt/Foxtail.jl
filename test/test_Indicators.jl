@@ -349,6 +349,15 @@
             @test r1[1] ≈ 0.0 atol=1e-10
             @test r1[2] ≈ 100.0 atol=1e-10                       # (2-1)/1 * 100
             @test r1[3] ≈ 50.0 atol=1e-10                        # (3-2)/2 * 100
+
+            # Zero-denominator guard: prices containing 0.0 should not produce Inf/NaN
+            roc_zero = ROC([0.0, 1.0, 2.0, 3.0, 4.0]; n=1)
+            @test !any(isnan, roc_zero) && !any(isinf, roc_zero)
+            @test roc_zero[2] ≈ 0.0 atol=1e-10  # denominator is 0.0 -> guarded to 0.0
+
+            # Input validation
+            @test_throws ArgumentError ROC(rand(5); n=0)  # period must be positive
+            @test_throws ArgumentError ROC(rand(3); n=5)  # length < period + 1
         end
 
         @testset "DPO" begin
@@ -520,6 +529,9 @@
             vwap_aapl = VWAP(data_ts)
             @test vwap_aapl isa TSFrame
             @test size(vwap_aapl)[1] == size(data_ts)[1]
+
+            # Input validation
+            @test_throws ArgumentError VWAP(rand(10, 3))  # wrong column count
         end
 
         @testset "CCI" begin
@@ -562,6 +574,10 @@
             cci_aapl = CCI(data_ts)
             @test cci_aapl isa TSFrame
             @test size(cci_aapl)[1] == size(data_ts)[1]
+
+            # Input validation
+            @test_throws ArgumentError CCI(rand(10, 2))  # wrong column count
+            @test_throws ArgumentError CCI(rand(10, 3); n=0)  # period must be positive
         end
 
         @testset "ForceIndex" begin
@@ -607,6 +623,9 @@
             fi_aapl = ForceIndex(data_ts)
             @test fi_aapl isa TSFrame
             @test size(fi_aapl)[1] == size(data_ts)[1]
+
+            # Input validation
+            @test_throws ArgumentError ForceIndex(rand(10, 3))  # wrong column count
         end
 
         @testset "MFI" begin
@@ -680,6 +699,10 @@
             @test size(mfi_aapl)[1] == size(data_ts)[1]
             r_aapl = MFI(data_ts[:, [:High, :Low, :Close, :Volume]] |> Matrix)
             @test all(v -> 0.0 <= v <= 100.0, r_aapl)
+
+            # Input validation
+            @test_throws ArgumentError MFI(rand(10, 3))  # wrong column count
+            @test_throws ArgumentError MFI(rand(10, 4); n=0)  # period must be positive
         end
 
         @testset "CMF" begin
@@ -755,6 +778,10 @@
             @test size(cmf_aapl)[1] == size(data_ts)[1]
             r_aapl = CMF(data_ts[:, [:High, :Low, :Close, :Volume]] |> Matrix)
             @test all(v -> -1.0 <= v <= 1.0, r_aapl)
+
+            # Input validation
+            @test_throws ArgumentError CMF(rand(10, 3))  # wrong column count
+            @test_throws ArgumentError CMF(rand(10, 4); n=0)  # period must be positive
         end
 
         @testset "VPT" begin
@@ -794,6 +821,15 @@
             vpt_aapl = VPT(data_ts)
             @test vpt_aapl isa TSFrame
             @test size(vpt_aapl)[1] == size(data_ts)[1]
+
+            # Zero-denominator guard: close containing 0.0 should not produce Inf/NaN
+            vpt_zero_data = Float64[0.0 1000; 50.0 1500; 100.0 1200]
+            vpt_zero = VPT(vpt_zero_data)
+            @test !any(isnan, vpt_zero) && !any(isinf, vpt_zero)
+            @test vpt_zero[2] ≈ 0.0 atol=1e-10  # denominator closes[1]=0.0 -> guarded to 0.0
+
+            # Input validation
+            @test_throws ArgumentError VPT(rand(10, 3))  # wrong column count
         end
 
         @testset "NVI" begin
@@ -837,6 +873,15 @@
             nvi_aapl = NVI(data_ts)
             @test nvi_aapl isa TSFrame
             @test size(nvi_aapl)[1] == size(data_ts)[1]
+
+            # Zero-denominator guard: close containing 0.0 should not produce Inf/NaN
+            nvi_zero_data = Float64[0.0 2000; 50.0 1500; 100.0 1800]
+            nvi_zero = NVI(nvi_zero_data)
+            @test !any(isnan, nvi_zero) && !any(isinf, nvi_zero)
+            @test nvi_zero[2] ≈ 1000.0 atol=1e-10  # denominator closes[1]=0.0 -> guarded, carries forward
+
+            # Input validation
+            @test_throws ArgumentError NVI(rand(10, 3))  # wrong column count
         end
 
         @testset "PVI" begin
@@ -880,6 +925,15 @@
             pvi_aapl = PVI(data_ts)
             @test pvi_aapl isa TSFrame
             @test size(pvi_aapl)[1] == size(data_ts)[1]
+
+            # Zero-denominator guard: close containing 0.0 should not produce Inf/NaN
+            pvi_zero_data = Float64[0.0 1000; 50.0 1500; 100.0 1200]
+            pvi_zero = PVI(pvi_zero_data)
+            @test !any(isnan, pvi_zero) && !any(isinf, pvi_zero)
+            @test pvi_zero[2] ≈ 1000.0 atol=1e-10  # denominator closes[1]=0.0 -> guarded, carries forward
+
+            # Input validation
+            @test_throws ArgumentError PVI(rand(10, 3))  # wrong column count
         end
 
         @testset "EMV" begin
@@ -1068,6 +1122,15 @@
 
             # All values should be finite
             @test all(isfinite, PPO(data_vec))
+
+            # Zero-denominator guard: prices starting at 0.0 should not produce Inf/NaN
+            ppo_zero = PPO([0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0,
+                            6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+                            16.0, 17.0, 18.0, 19.0, 20.0, 21.0]; fast=3, slow=5, signal=3)
+            @test !any(isnan, ppo_zero) && !any(isinf, ppo_zero)
+
+            # Input validation
+            @test_throws ArgumentError PPO(rand(5))  # length < slow period
         end
 
         @testset "KST" begin
@@ -1092,6 +1155,42 @@
             # Signal should converge toward Line for steady-state data
             # (both columns should be close at the end for linear input)
             @test abs(r[end, 1] - r[end, 2]) < abs(r[end, 1]) * 0.5 + 1e-10
+
+            # Cross-reference numerical validation
+            # Manually compute KST using Foxtail's ROC and SMA, then compare with KST()
+            kst_prices = [44.0, 44.5, 44.3, 43.8, 44.9, 45.2, 45.0, 44.7, 45.5, 46.0,
+                          46.3, 45.8, 46.5, 47.0, 46.8, 47.5, 48.0, 47.3, 48.2, 49.0,
+                          48.5, 49.3, 50.0, 49.5, 50.5, 51.0, 50.2, 51.5, 52.0, 51.3,
+                          52.5, 53.0, 52.2, 53.5, 54.0, 53.3, 54.5, 55.0, 54.2, 55.5]
+            kst_r1, kst_r2, kst_r3, kst_r4 = 3, 5, 7, 10
+            kst_s1, kst_s2, kst_s3, kst_s4 = 3, 4, 5, 6
+            kst_sig = 4
+
+            # Reference: replicate KST formula with Foxtail's ROC and SMA
+            ref_roc1 = SMA(ROC(kst_prices; n=kst_r1); n=kst_s1)
+            ref_roc2 = SMA(ROC(kst_prices; n=kst_r2); n=kst_s2)
+            ref_roc3 = SMA(ROC(kst_prices; n=kst_r3); n=kst_s3)
+            ref_roc4 = SMA(ROC(kst_prices; n=kst_r4); n=kst_s4)
+            ref_kst = 1.0 .* ref_roc1 .+ 2.0 .* ref_roc2 .+ 3.0 .* ref_roc3 .+ 4.0 .* ref_roc4
+            ref_signal = SMA(ref_kst; n=kst_sig)
+
+            actual = KST(kst_prices; r1=kst_r1, r2=kst_r2, r3=kst_r3, r4=kst_r4,
+                         s1=kst_s1, s2=kst_s2, s3=kst_s3, s4=kst_s4, signal=kst_sig)
+
+            # KST line (column 1) should match reference exactly
+            @test length(actual[:, 1]) == length(ref_kst)
+            for i in eachindex(ref_kst)
+                @test actual[i, 1] ≈ ref_kst[i] atol=1e-10
+            end
+
+            # Signal line (column 2) should match reference exactly
+            for i in eachindex(ref_signal)
+                @test actual[i, 2] ≈ ref_signal[i] atol=1e-10
+            end
+
+            # Sanity check: after full warmup, KST values should be non-zero
+            @test actual[end, 1] != 0.0
+            @test actual[end, 2] != 0.0
         end
     end
 
@@ -1188,6 +1287,11 @@
             for i in 1:10
                 @test d[i,2] <= d[i,3] <= d[i,1]
             end
+
+            # Input validation
+            @test_throws ArgumentError DonchianChannel(rand(10, 2))  # wrong column count
+            @test_throws ArgumentError DonchianChannel(rand(10, 3); n=0)  # period must be positive
+            @test_throws ArgumentError DonchianChannel(rand(3, 3); n=5)  # length < period
         end
 
         @testset "KeltnerChannel" begin
@@ -1218,6 +1322,10 @@
             for i in 1:10
                 @test kc[i,3] <= kc[i,1] <= kc[i,2]
             end
+
+            # Input validation
+            @test_throws ArgumentError KeltnerChannel(rand(10, 2))  # wrong column count
+            @test_throws ArgumentError KeltnerChannel(rand(10, 3); n=0)  # period must be positive
         end
 
         @testset "Supertrend" begin
@@ -1270,6 +1378,11 @@
             @test size(st_aapl)[1] == size(data_ts)[1]
             aapl_mat = Supertrend(data_ts[:, [:High, :Low, :Close]] |> Matrix)
             @test all(d -> d == 1.0 || d == -1.0, aapl_mat[:, 2])
+
+            # Input validation
+            @test_throws ArgumentError Supertrend(rand(10, 2))  # wrong column count
+            @test_throws ArgumentError Supertrend(rand(10, 3); n=0)  # period must be positive
+            @test_throws ArgumentError Supertrend(rand(10, 3); mult=-1.0)  # multiplier must be positive
         end
 
         @testset "DMI" begin
@@ -1314,6 +1427,10 @@
             @test size(dmi_aapl)[1] == size(data_ts)[1]
             aapl_dmi_mat = DMI(data_ts[:, [:High, :Low, :Close]] |> Matrix)
             @test all(v -> v >= 0.0 && v <= 100.0, aapl_dmi_mat[:, 3])  # ADX bounded
+
+            # Input validation
+            @test_throws ArgumentError DMI(rand(10, 2))  # wrong column count
+            @test_throws ArgumentError DMI(rand(10, 3); n=0)  # period must be positive
         end
 
         @testset "Aroon" begin

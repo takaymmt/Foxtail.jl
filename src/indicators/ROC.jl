@@ -10,7 +10,7 @@
     # Startup period: first n values are 0.0
     # After startup: ROC[i] = (P[i] - P[i-n]) / P[i-n] * 100
     @inbounds for i in (period+1):len
-        result[i] = (prices[i] - prices[i-period]) / prices[i-period] * 100.0
+        result[i] = iszero(prices[i-period]) ? 0.0 : (prices[i] - prices[i-period]) / prices[i-period] * 100.0
     end
 
     return result

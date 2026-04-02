@@ -48,7 +48,7 @@ result = VPT(data)
 
     # Calculate VPT
     @inbounds for i in 2:n
-        results[i] = results[i-1] + volumes[i] * (closes[i] - closes[i-1]) / closes[i-1]
+        results[i] = results[i-1] + (iszero(closes[i-1]) ? 0.0 : volumes[i] * (closes[i] - closes[i-1]) / closes[i-1])
     end
 
     return results

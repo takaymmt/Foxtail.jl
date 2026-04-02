@@ -54,7 +54,7 @@ result = NVI(data)
     # Calculate NVI
     @inbounds for i in 2:n
         if volumes[i] < volumes[i-1]
-            results[i] = results[i-1] * (1.0 + (closes[i] - closes[i-1]) / closes[i-1])
+            results[i] = iszero(closes[i-1]) ? results[i-1] : results[i-1] * (1.0 + (closes[i] - closes[i-1]) / closes[i-1])
         else
             results[i] = results[i-1]
         end

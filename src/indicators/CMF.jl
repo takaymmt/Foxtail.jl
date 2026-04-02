@@ -71,14 +71,18 @@ result = CMF(prices; n=2)
         end
     end
 
-    @inbounds for i in 1:nrows
-        start = max(1, i - n + 1)
-        sum_mfv = 0.0
-        sum_vol = 0.0
+    sum_mfv = 0.0
+    sum_vol = 0.0
 
-        for j in start:i
-            sum_mfv += mfv[j]
-            sum_vol += volumes[j]
+    @inbounds for i in 1:nrows
+        # Add the new element entering the window
+        sum_mfv += mfv[i]
+        sum_vol += volumes[i]
+
+        # Subtract the element leaving the window
+        if i > n
+            sum_mfv -= mfv[i - n]
+            sum_vol -= volumes[i - n]
         end
 
         if sum_vol == 0.0
