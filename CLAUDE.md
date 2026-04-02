@@ -71,9 +71,8 @@
 - 研究メモは `.claude/docs/research/` に蓄積（テンプレート配布時は空を維持）
 
 ## Current State（最終更新: 2026-04-02）
-- テスト数: 4,115本（全通過）
-- 実装済み指標: 45指標（`docs/indicator-reference.md` 参照）
-- 次の候補: Pivot Points ★★★★, Connors RSI ★★★, Vortex ★★, Ultimate Oscillator ★★, Mass Index ★
+- テスト数: 4,570本（全通過）
+- 実装済み指標: 51指標（`docs/indicator-reference.md` 参照）
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # @orchestra:local-boundary
