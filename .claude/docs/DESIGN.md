@@ -61,6 +61,7 @@ Claude Code Orchestra is a multi-agent collaboration framework. Claude Code is t
 
 | Decision | Rationale | Alternatives Considered | Date |
 |----------|-----------|------------------------|------|
+| Foxtail.jl prioritization: documentation-first with 80/20 docs-to-indicators split | Current indicator set covers all top-20 professional indicators and 7/10 major workflows fully; outdated/incomplete docs are the primary adoption bottleneck and have higher ROI than specialist indicators | Indicator-first expansion, equal split, hybrid with docs leading | 2026-04-02 |
 | Gemini role expanded to codebase analysis + research + multimodal | Gemini CLI has native 1M context; Claude Code is 200K; delegate large-context tasks to Gemini | Keep Claude for codebase analysis (requires 1M Beta) | 2026-02-19 |
 | All subagents default to Opus | 200K context makes quality of reasoning more important than context size; Opus provides better output | Sonnet (cheaper but 200K same as Opus, weaker reasoning) | 2026-02-19 |
 | Agent Teams default model changed to Opus | Consistent with subagent model selection; better reasoning for parallel tasks | Sonnet (cheaper) | 2026-02-19 |
@@ -75,6 +76,9 @@ Claude Code Orchestra is a multi-agent collaboration framework. Claude Code is t
 
 ## TODO
 
+- [ ] Foxtail.jl docs priority batch: fix README indicator status/count mismatches and remove stale "ToDo" claims
+- [ ] Publish missing indicator docs for ConnorsRSI, MassIndex, UltimateOscillator, Vortex, PivotPoints
+- [ ] Add workflow guides, TA-Lib validation examples, and migration guidance before expanding specialist indicators
 - [ ] Test Agent Teams workflow end-to-end with a real project
 - [ ] Update hooks for Agent Teams quality gates
 - [ ] Evaluate optimal team size for /team-implement
@@ -89,6 +93,7 @@ Claude Code Orchestra is a multi-agent collaboration framework. Claude Code is t
 
 | Date | Changes |
 |------|---------|
+| 2026-04-02 | Recorded Foxtail.jl prioritization decision: documentation-first, target 80/20 docs-to-indicators split based on spike findings |
 | 2026-04-01 | TSFrames.jl: switch from public registry to takaymmt/TSFrames.jl fork via `Pkg.add(url=..., rev="main")` |
 | 2026-03-14 | Gemini narrowed to multimodal-only; research/analysis delegated to Opus subagents (1M context) |
 | 2026-02-19 | Context-aware redesign: Claude=200K, Gemini=1M (codebase+research+multimodal), all subagents/teams→Opus |

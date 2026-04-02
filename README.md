@@ -1,138 +1,160 @@
-# Foxtail
+# Foxtail.jl
 
 > **Fi**nancial **O**bservation and e**X**ploration **T**echnical **A**nalysis **I**ndicators **L**ibrary
 
-Foxtail is a high-performance library for technical analysis indicators using the online algorithm. Currently, the time series data input/output is dependent on TSFrames.
+A high-performance Julia library for technical analysis indicators using **online (streaming) algorithms**. Designed for use with [TSFrames.jl](https://github.com/xKDR/TSFrames.jl) time series data.
 
-## Prerequisites
+## Features
 
--   TSFrames
+- **50 technical indicators** across 7 categories (moving averages, trend, momentum, oscillators, volume, volatility, pivot points)
+- **Online algorithm design** -- incremental computation using circular buffers for O(1) per-bar updates
+- **TSFrames integration** -- accepts `TSFrame` input and returns properly named `TSFrame` output
+- **4,100+ tests** with comprehensive edge case coverage
+- **Zero external API dependencies** -- pure computation from OHLCV data
 
-## Getting Started
+## Installation
+
+```julia
+using Pkg
+Pkg.add(url="https://github.com/takaymmt/Foxtail.jl")
+```
+
+## Quick Start
 
 ```julia
 using Foxtail, TSFrames, DataFrames, Dates
 
-ts = TSFrame(DataFrame(Index=Date(2024,1,1):Date(2024,1,20), Close=collect(1.0:20.0)))
+# Create sample time series
+dates = Date(2020,1,1):Day(1):Date(2024,12,31)
+n = length(dates)
+ts = TSFrame(DataFrame(
+    Index  = dates,
+    Open   = cumsum(randn(n)) .+ 100,
+    High   = cumsum(randn(n)) .+ 102,
+    Low    = cumsum(randn(n)) .+ 98,
+    Close  = cumsum(randn(n)) .+ 100,
+    Volume = abs.(randn(n)) .* 1e6
+))
 
-d = Date(1980,1,1):Date(2024,12,31)
-ts = TSFrame(DataFrame(Index=d, Close=rand(length(d))*250))
+# Moving Averages
+sma = SMA(ts; n=200)
+ema = EMA(ts; n=50)
 
-sma = SMA(ts, 200)
-ema = EMA(ts, 50)
+# Trend
+supertrend = Supertrend(ts; n=7, mult=3.0)
+ichimoku   = Ichimoku(ts)
+
+# Momentum & Oscillators
+rsi  = RSI(ts; n=14)
+macd = MACD(ts; fast=12, slow=26, signal=9)
+
+# Volume
+vwap = VWAP(ts)
+obv  = OBV(ts)
+
+# Volatility
+bb  = BB(ts; n=20, num_std=2.0)
+atr = ATR(ts; n=14)
+
+# Pivot Points (5 methods: Classic, Fibonacci, Woodie, Camarilla, DeMark)
+pivots = PivotPoints(ts; method=:Classic)
 ```
 
-## Priority Legend
+## Supported Indicators
 
-| Stars | Priority |
-|-------|----------|
-| ★★★★★ | Critical — high market impact, implement immediately |
-| ★★★★  | High — widely used, strong practical value |
-| ★★★   | Medium — standard indicator, useful to have |
-| ★★    | Low — niche or derivative use cases |
-| ★     | Minimal — rarely used in practice |
+### Moving Averages (13)
 
-## Support Indicators
+| Indicator | Description |
+|-----------|-------------|
+| ALMA | Arnaud Legoux Moving Average |
+| DEMA | Double Exponential Moving Average |
+| EMA | Exponential Moving Average |
+| HMA | Hull Moving Average |
+| JMA | Jurik Moving Average |
+| KAMA | Kaufman Adaptive Moving Average |
+| SMA | Simple Moving Average |
+| SMMA | Smoothed Moving Average (Wilder's / RMA) |
+| T3 | Tillson T3 Moving Average |
+| TEMA | Triple Exponential Moving Average |
+| TMA | Triangular Moving Average (TRIMA) |
+| WMA | Weighted Moving Average |
+| ZLEMA | Zero-Lag Exponential Moving Average |
 
-### Momentum Indicators
+### Trend Indicators (8)
 
--   MACD (Moving Average Convergence Divergence)
-    -   MACD3
--   RSI (Relative Strength Index)
--   Stochastic
--   StochasticRSI
--   Williams %R
+| Indicator | Description |
+|-----------|-------------|
+| Aroon | Aroon Up/Down/Oscillator |
+| DMI | Directional Movement Index / ADX |
+| DonchianChannel | Donchian Channel (Breakout Bands) |
+| Ichimoku | Ichimoku Cloud (Kinko Hyo) |
+| KeltnerChannel | Keltner Channel (ATR Envelopes) |
+| ParabolicSAR | Parabolic Stop and Reverse |
+| Supertrend | ATR-based Trend Following |
+| Vortex | Vortex Indicator (VI+/VI-) |
 
-ToDos (not implemented yet)
+### Momentum Indicators (10)
 
--   DMI (Directional Movement Index) / ADX ★★★★★ — universal trend strength filter; used in nearly all professional strategies as a signal validator (`ADX > 25` threshold)
--   CCI (Commodity Channel Index) ★★★
--   MFI (Money Flow Index) ★★★
--   Connors RSI ★★★ — 3-component RSI composite (RSI + Streak RSI + %Rank); favored by systematic short-term traders
--   ROC (Rate of Change) ★★★ — core momentum measure for factor investing and screening
--   KST (Know Sure Thing) ★★ — depends on ROC
--   PPO (Percentage Price Oscillator) ★★
--   CMF (Chaikin Money Flow) ★★
--   Ultimate Oscillator ★★
--   DPO (Detrended Price Oscillator) ★
+| Indicator | Description |
+|-----------|-------------|
+| CCI | Commodity Channel Index |
+| ConnorsRSI | Connors RSI (3-component composite) |
+| DPO | Detrended Price Oscillator |
+| KST | Know Sure Thing |
+| MACD | Moving Average Convergence Divergence |
+| MACD3 | Triple MACD |
+| PPO | Percentage Price Oscillator |
+| ROC | Rate of Change |
+| RSI | Relative Strength Index |
+| StochRSI | Stochastic RSI |
 
-### Volume Indicators
+### Oscillators (4)
 
--   ADL (Accumulation/Distribution Line)
--   Chaikin Oscillator
--   OBV (On Balance Volume)
+| Indicator | Description |
+|-----------|-------------|
+| Stoch | Stochastic Oscillator |
+| UltimateOscillator | Ultimate Oscillator (3-timeframe) |
+| WR | Williams %R |
+| SqueezeMomentum | TTM Squeeze Momentum |
 
-ToDos (not implemented yet)
+### Volume Indicators (11)
 
--   VWAP (Volume Weighted Average Price) ★★★★★ — the primary institutional execution benchmark; institutional algorithms defend VWAP creating self-fulfilling support/resistance levels
--   Anchored VWAP ★★★ — VWAP from a user-defined anchor point (e.g., earnings date); growing institutional adoption
--   Force Index ★★
--   VPT (Volume Price Trend) ★★
--   EMV (Ease of Movement) ★★
--   NVI/PVI (Negative/Positive Volume Index) ★
+| Indicator | Description |
+|-----------|-------------|
+| ADL | Accumulation/Distribution Line |
+| ChaikinOsc | Chaikin Oscillator |
+| CMF | Chaikin Money Flow |
+| EMV | Ease of Movement |
+| ForceIndex | Force Index |
+| MFI | Money Flow Index |
+| NVI | Negative Volume Index |
+| OBV | On Balance Volume |
+| PVI | Positive Volume Index |
+| VPT | Volume Price Trend |
+| VWAP | Volume Weighted Average Price |
 
-### Volatility Indicators
+### Volatility Indicators (3)
 
--   ATR (Average True Range)
--   Bollinger Bands
+| Indicator | Description |
+|-----------|-------------|
+| ATR | Average True Range |
+| BB | Bollinger Bands |
+| MassIndex | Mass Index (Reversal Bulge Detection) |
 
-ToDos (not implemented yet)
+### Pivot Points (1)
 
--   Keltner Channel ★★★★ — prerequisite for Squeeze Momentum (TTM Squeeze); easy to implement (EMA + ATR already available)
--   Donchian Channel ★★★★ — foundation of breakout systems; used by Turtle Traders and systematic quant funds
--   Squeeze Momentum (TTM Squeeze) ★★★★ — TradingView's most-liked community indicator (76K+ likes); detects volatility compression before breakouts; requires Keltner Channel + Bollinger Bands
--   Mass Index ★
+| Indicator | Description |
+|-----------|-------------|
+| PivotPoints | Pivot Points (Classic / Fibonacci / Woodie / Camarilla / DeMark) |
 
-### Trending Indicators
+## Documentation
 
-ToDos (not implemented yet)
-
--   Supertrend ★★★★★ — one of TradingView's most popular indicators; trend-following with dynamic ATR-based stops; easy to implement
--   Ichimoku Cloud ★★★★★ — defines market structure for millions of traders; dominant in JPY-pair and Asian markets
--   Parabolic SAR ★★★★ — classic stop-and-reverse trend indicator; universal stop placement tool
--   ADX (Average Directional Index) ★★★★★ — same as DMI/ADX above
--   Aroon Indicator ★★
--   Vortex Indicator ★★
-
-### Moving Averages
-
--   ALMA
--   DEMA
--   EMA
--   HMA
--   JMA (Jurik MA)
--   KAMA (Kaufman's Adaptive MA)
--   SMA
--   SMMA (RMA)
--   T3
--   TEMA
--   TMA (TRIMA)
--   WMA
--   ZLEMA
-
-### Pivot Points
-
-ToDos (not implemented yet)
-
--   Pivot Points (Standard/Fibonacci/Woodie/Camarilla/DM) ★★★★ — strongest self-fulfilling prophecy effect: all market participants calculate identical levels from the same prior-period OHLC formula; widely embedded in trading platform algorithms
-
-### Price Action Patterns (just memo, not intended to be implemented)
-
--   Support/Resistance Levels ★★★
--   Fibonacci Retracement/Extension ★★★
--   Price Channels ★★
-
-### Experimental/Advanced (just memo, not intended to be implemented)
-
--   Ehlers Indicators (Cyber Cycle, Roofing Filter) ★★
--   Hurst Exponent ★★
--   Fractal Dimension Index ★
--   Ehlers Fisher Transform ★
+For detailed API signatures, parameters, formulas, and usage examples, see the [Indicator Reference](docs/indicator-reference.md).
 
 ## Acknowledgments
 
 The implementation is heavily influenced by:
 
--   [`tailpp`](https://github.com/nardew/talipp)
--   [`OnlineTechnicalIndicators.jl`](https://github.com/femtotrader/OnlineTechnicalIndicators.jl) (Julia translation of tailpp)
--   The Circular Buffer implementation references the design patterns from [`DataStructures.jl`](https://juliacollections.github.io/DataStructures.jl/stable/).
+- [`talipp`](https://github.com/nardew/talipp)
+- [`OnlineTechnicalIndicators.jl`](https://github.com/femtotrader/OnlineTechnicalIndicators.jl) (Julia translation of talipp)
+- The Circular Buffer implementation references the design patterns from [`DataStructures.jl`](https://juliacollections.github.io/DataStructures.jl/stable/).

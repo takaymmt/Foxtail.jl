@@ -1,73 +1,97 @@
-# Foxtail.jl — Implementation TODO
+# Foxtail.jl — Task List
 
-> Created: 2026-04-01 | Last updated: 2026-04-01
-> Based on: market impact survey + codebase architecture analysis
+> Last updated: 2026-04-02
+> Decision basis: Spike "Indicators vs Documentation" (GO-B, confidence: HIGH)
+> Full spike report: `.claude/docs/research/spike-indicators-vs-docs.md`
 
-## Progress: 17 indicators implemented this session (3702 tests passing)
+---
 
-## Priority Rationale
+## Active Sprint: Documentation Improvement
 
-Rankings combine two factors:
-- **Market Impact**: self-fulfilling prophecy strength, institutional adoption, TradingView usage
-- **Implementation Ease**: code complexity, reuse of existing building blocks (EMA, ATR, MinMaxQueue)
+### 🔴 URGENT (do first)
 
-## Phase 1 — Critical ✅ COMPLETE
+- [x] **README.md 全面改訂** ✅ 2026-04-02
+  - 誤記修正、50指標の正確な反映、ToDoリスト削除
+  - 新構成: Features / Installation / Quick Start / Supported Indicators（7カテゴリ表）
 
-- [x] **VWAP** — `@prep_miso [High, Low, Close, Volume]`
-- [x] **Supertrend** — `@prep_mimo [High,Low,Close] → [Value, Direction]`
-- [x] **Keltner Channel** — `@prep_mimo [High,Low,Close] → [Middle, Upper, Lower]`
-- [x] **ADX / DMI** — `@prep_mimo [High,Low,Close] → [DIPlus, DIMinus, ADX]`
-- [x] **Donchian Channel** — `@prep_mimo [High,Low,Close] → [Upper, Lower, Middle]`
-- [x] **ROC** — `@prep_siso`
+- [x] **indicator-reference.md に5指標追加** ✅ 2026-04-02
+  - ConnorsRSI, MassIndex, UltimateOscillator, Vortex, PivotPoints を追加
+  - Summary Table・詳細セクション・各参照テーブルを全て更新、指標番号を1-50に振り直し
 
-## Phase 2 — Trend Systems ✅ COMPLETE
+### 🟡 HIGH (次のスプリント)
 
-- [x] **Parabolic SAR** — `@prep_mimo [High,Low] → [Value, Direction]`
-- [x] **Ichimoku Cloud** — manual TSFrame wrapper; N+26 row output; `[Tenkan, Kijun, SenkouA, SenkouB, Chikou]`
-- [x] **CCI** — `@prep_miso [High,Low,Close]`
-- [x] **Aroon** — `@prep_mimo [High,Low] → [Up, Down, Oscillator]` (required MinMaxQueue extension)
-- [x] **PPO** — `@prep_simo → [Line, Signal, Histogram]`
+- [ ] **quickstart tutorial 追加**
+  - 実データ（ランダム or AAPL）で5分以内に動く例
+  - 複数指標の組み合わせを1つのワークフロー例として示す
+  - 工数目安: 2-4h
 
-## Phase 3 — Volume & Money Flow ✅ COMPLETE
+- [ ] **TA-Lib 検証例ページ追加**
+  - RSI / MACD / Bollinger Bands を TA-Lib リファレンス値と照合する例
+  - プロ向けの信頼性 (trust gap) 解消が目的
+  - 工数目安: 2-3d
 
-- [x] **MFI** — `@prep_miso [High,Low,Close,Volume]`
-- [x] **CMF** — `@prep_miso [High,Low,Close,Volume]`
-- [x] **Force Index** — `@prep_miso [Close,Volume]`
-- [x] **VPT** — `@prep_miso [Close,Volume]`
-- [x] **NVI / PVI** — `@prep_miso [Close,Volume]` (×2)
-- [x] **KST** — `@prep_simo → [Line, Signal]`
-- [x] **EMV** — `@prep_miso [High,Low,Volume]`
+- [ ] **workflow guides 作成**
+  - Trend-following ワークフロー（EMA + DMI + ATR）
+  - Mean-reversion ワークフロー（BB + RSI + volume）
+  - Breakout ワークフロー（Donchian + ATR + OBV）
+  - Momentum ワークフロー（MACD + RSI + MFI）
+  - 工数目安: 3-5d
 
-## Phase 4 — New Indicators (from survey) ✅ COMPLETE
+### 🟢 MEDIUM (その後)
 
-- [x] **Squeeze Momentum (TTM Squeeze)** — `@prep_mimo [High,Low,Close] → [Histogram, Squeeze]`
+- [ ] **migration guide 追加**
+  - pandas-ta / TA-Lib からの移行チートシート
+  - 指標名マッピング + パラメータ対応表
+  - 工数目安: 2-3d
 
-## Phase 5 — Low Priority / Remaining
+- [ ] **indicator comparison tables**
+  - 同カテゴリ内でどれを選ぶか（例: MACD vs PPO vs KST for momentum）
+  - 工数目安: 1-2d
 
-- [ ] **Pivot Points** (Standard/Fibonacci/Woodie/Camarilla/DM) ★★★★
-  - Design: function reads previous row's OHLC; user pre-aggregates for weekly/monthly
-  - Needs `@prep_mimo [High,Low,Close,Open] → [Pivot, R1, R2, R3, S1, S2, S3]`
-  - Multiple method support via `method::Symbol` parameter
+---
 
-- [ ] **Connors RSI** ★★★
-  - `@prep_siso` — composite of RSI(3) + StreakRSI(2) + %Rank(ROC(1), 100)
-  - Needs: streak calculation helper + rolling percentile rank helper
+## Deferred (保留)
 
-- [ ] **Vortex Indicator** ★★
-  - `@prep_mimo [High,Low,Close] → [VIPlus, VIMinus]`
-  - Uses TR() (available)
+### 指標追加（docs改善後に再検討）
 
-- [ ] **Mass Index** ★
-  - `@prep_miso [High,Low]`
-  - Σ(EMA(range, 9) / EMA(EMA(range, 9), 9))
+- [ ] **Anchored VWAP** ★★★ — 唯一の実需ギャップ。docs改善後に需要を再評価してから着手
+- [ ] **TRIX** ★★ — ニッチ。後回し可
+- [ ] **TSI (True Strength Index)** ★★ — ニッチ。後回し可
+- [ ] **Coppock Curve** ★ — ニッチ。後回し可
 
-- [ ] **Ultimate Oscillator** ★★
-  - `@prep_miso [High,Low,Close]`
-  - 3-timeframe buying pressure / TR ratios
+### インフラ・その他
 
-- [ ] **DPO** ★ — `@prep_siso` ✅ DONE (implemented in Phase 3 batch)
+- [ ] **Documenter.jl セットアップ + GitHub Pages デプロイ**
+  - 優先度はworkflow guides完成後
+  - 工数目安: 4-8h
 
-## Infrastructure Changes Made
+---
 
-- `MinMaxQueue`: added `get_max_idx()` / `get_min_idx()` (Aroon対応)
-- `src/Foxtail.jl`: exported the new MinMaxQueue functions
+## Completed ✅
+
+### 指標実装（50指標）
+
+#### Moving Averages (13)
+- [x] ALMA, DEMA, EMA, HMA, JMA, KAMA, SMA, SMMA, T3, TEMA, TMA, WMA, ZLEMA
+
+#### Trend (7)
+- [x] Aroon, DMI/ADX, DonchianChannel, Ichimoku, KeltnerChannel, ParabolicSAR, Supertrend
+
+#### Momentum (9)
+- [x] CCI, DPO, KST, MACD, MACD3, PPO, ROC, RSI, StochRSI
+
+#### Oscillators (3)
+- [x] Stoch, WR, SqueezeMomentum
+
+#### Volume (11)
+- [x] ADL, ChaikinOsc, CMF, EMV, ForceIndex, MFI, NVI, OBV, PVI, VPT, VWAP
+
+#### Volatility (2)
+- [x] ATR, BB
+
+#### Recent additions (5)
+- [x] ConnorsRSI, MassIndex, UltimateOscillator, Vortex, PivotPoints
+
+### インフラ
+- [x] MinMaxQueue: `get_max_idx()` / `get_min_idx()` 追加（Aroon対応）
+- [x] テスト: 4,115本全通過

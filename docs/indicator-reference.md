@@ -1,6 +1,6 @@
 # Foxtail.jl Indicator Reference
 
-Complete reference for all 45 technical indicators in Foxtail.jl.
+Complete reference for all 50 technical indicators in Foxtail.jl.
 
 ## Summary Table
 
@@ -33,51 +33,61 @@ Complete reference for all 45 technical indicators in Foxtail.jl.
 | 18 | [KeltnerChannel](#keltnerchannel) | MIMO | Keltner Channel | `n=20`, `mult=2.0`, `ma_type=:EMA` | `KeltnerChannel_Middle`, `_Upper`, `_Lower` |
 | 19 | [ParabolicSAR](#parabolicsar) | MIMO | Parabolic Stop and Reverse | `af_start=0.02`, `af_step=0.02`, `af_max=0.20` | `ParabolicSAR_Value`, `_Direction` |
 | 20 | [Supertrend](#supertrend) | MIMO | Supertrend | `n=7`, `mult=3.0` | `Supertrend_Value`, `_Direction` |
+| 21 | [Vortex](#vortex) | MIMO | Vortex Indicator | `n=14` | `Vortex_VIPlus`, `_VIMinus` |
 
 ### Momentum Indicators
 
 | # | Indicator | Type | Description | Key Parameters | Output Columns |
 |---|-----------|------|-------------|----------------|----------------|
-| 21 | [CCI](#cci) | MISO | Commodity Channel Index | `n=20` | `CCI_n` |
-| 22 | [DPO](#dpo) | SISO | Detrended Price Oscillator | `n=20` | `DPO_n` |
-| 23 | [KST](#kst) | SIMO | Know Sure Thing | `r1=10`, `r2=13`, `r3=15`, `r4=20`, ... | `KST_Line`, `KST_Signal` |
-| 24 | [MACD](#macd) | SIMO | Moving Average Convergence Divergence | `fast=12`, `slow=26`, `signal=9` | `MACD_Line`, `_Signal`, `_Histogram` |
-| 25 | [MACD3](#macd3) | SIMO | Triple MACD | `fast=5`, `middle=20`, `slow=40`, `ma_type=:EMA` | `MACD3_Fast`, `_Middle`, `_Slow` |
-| 26 | [PPO](#ppo) | SIMO | Percentage Price Oscillator | `fast=12`, `slow=26`, `signal=9` | `PPO_Line`, `_Signal`, `_Histogram` |
-| 27 | [ROC](#roc) | SISO | Rate of Change | `n=14` | `ROC_n` |
-| 28 | [RSI](#rsi) | SISO | Relative Strength Index | `n=14`, `ma_type=:SMMA` | `RSI_n` |
-| 29 | [StochRSI](#stochrsi) | SIMO | Stochastic RSI | `n=14`, `k_smooth=3`, `d_smooth=3` | `StochRSI_K`, `StochRSI_D` |
+| 22 | [CCI](#cci) | MISO | Commodity Channel Index | `n=20` | `CCI_n` |
+| 23 | [ConnorsRSI](#connorsrsi) | SISO | Connors RSI (3-component composite) | `n_rsi=3`, `n_streak=2`, `n_pctrank=100` | `ConnorsRSI` |
+| 24 | [DPO](#dpo) | SISO | Detrended Price Oscillator | `n=20` | `DPO_n` |
+| 25 | [KST](#kst) | SIMO | Know Sure Thing | `r1=10`, `r2=13`, `r3=15`, `r4=20`, ... | `KST_Line`, `KST_Signal` |
+| 26 | [MACD](#macd) | SIMO | Moving Average Convergence Divergence | `fast=12`, `slow=26`, `signal=9` | `MACD_Line`, `_Signal`, `_Histogram` |
+| 27 | [MACD3](#macd3) | SIMO | Triple MACD | `fast=5`, `middle=20`, `slow=40`, `ma_type=:EMA` | `MACD3_Fast`, `_Middle`, `_Slow` |
+| 28 | [PPO](#ppo) | SIMO | Percentage Price Oscillator | `fast=12`, `slow=26`, `signal=9` | `PPO_Line`, `_Signal`, `_Histogram` |
+| 29 | [ROC](#roc) | SISO | Rate of Change | `n=14` | `ROC_n` |
+| 30 | [RSI](#rsi) | SISO | Relative Strength Index | `n=14`, `ma_type=:SMMA` | `RSI_n` |
+| 31 | [StochRSI](#stochrsi) | SIMO | Stochastic RSI | `n=14`, `k_smooth=3`, `d_smooth=3` | `StochRSI_K`, `StochRSI_D` |
 
 ### Oscillators
 
 | # | Indicator | Type | Description | Key Parameters | Output Columns |
 |---|-----------|------|-------------|----------------|----------------|
-| 30 | [Stoch](#stoch) | MIMO | Stochastic Oscillator | `n=14`, `k_smooth=3`, `d_smooth=3` | `Stoch_K`, `Stoch_D` |
-| 31 | [WR](#wr) | MIMO | Williams %R | `n=14` | `WR_raw`, `WR_EMA` |
-| 32 | [SqueezeMomentum](#squeezemomentum) | MIMO | TTM Squeeze Momentum | `n=20`, `bb_mult=2.0`, `kc_mult=1.5` | `SqueezeMomentum_Histogram`, `_Squeeze` |
+| 32 | [Stoch](#stoch) | MIMO | Stochastic Oscillator | `n=14`, `k_smooth=3`, `d_smooth=3` | `Stoch_K`, `Stoch_D` |
+| 33 | [UltimateOsc](#ultimateosc) | MISO | Ultimate Oscillator | `fast=7`, `medium=14`, `slow=28` | `UltimateOsc` |
+| 34 | [WR](#wr) | MIMO | Williams %R | `n=14` | `WR_raw`, `WR_EMA` |
+| 35 | [SqueezeMomentum](#squeezemomentum) | MIMO | TTM Squeeze Momentum | `n=20`, `bb_mult=2.0`, `kc_mult=1.5` | `SqueezeMomentum_Histogram`, `_Squeeze` |
 
 ### Volume Indicators
 
 | # | Indicator | Type | Description | Key Parameters | Output Columns |
 |---|-----------|------|-------------|----------------|----------------|
-| 33 | [ADL](#adl) | MISO | Accumulation/Distribution Line | *(none)* | `ADL` |
-| 34 | [ChaikinOsc](#chaikinosc) | MISO | Chaikin Oscillator | `fast=3`, `slow=10` | `ChaikinOsc` |
-| 35 | [CMF](#cmf) | MISO | Chaikin Money Flow | `n=20` | `CMF_n` |
-| 36 | [EMV](#emv) | MISO | Ease of Movement | `n=14` | `EMV_n` |
-| 37 | [ForceIndex](#forceindex) | MISO | Force Index | `n=13` | `ForceIndex_n` |
-| 38 | [MFI](#mfi) | MISO | Money Flow Index | `n=14` | `MFI_n` |
-| 39 | [NVI](#nvi) | MISO | Negative Volume Index | *(none)* | `NVI` |
-| 40 | [OBV](#obv) | MISO | On Balance Volume | *(none)* | `OBV` |
-| 41 | [PVI](#pvi) | MISO | Positive Volume Index | *(none)* | `PVI` |
-| 42 | [VPT](#vpt) | MISO | Volume Price Trend | *(none)* | `VPT` |
-| 43 | [VWAP](#vwap) | MISO | Volume Weighted Average Price | *(none)* | `VWAP` |
+| 36 | [ADL](#adl) | MISO | Accumulation/Distribution Line | *(none)* | `ADL` |
+| 37 | [ChaikinOsc](#chaikinosc) | MISO | Chaikin Oscillator | `fast=3`, `slow=10` | `ChaikinOsc` |
+| 38 | [CMF](#cmf) | MISO | Chaikin Money Flow | `n=20` | `CMF_n` |
+| 39 | [EMV](#emv) | MISO | Ease of Movement | `n=14` | `EMV_n` |
+| 40 | [ForceIndex](#forceindex) | MISO | Force Index | `n=13` | `ForceIndex_n` |
+| 41 | [MFI](#mfi) | MISO | Money Flow Index | `n=14` | `MFI_n` |
+| 42 | [NVI](#nvi) | MISO | Negative Volume Index | *(none)* | `NVI` |
+| 43 | [OBV](#obv) | MISO | On Balance Volume | *(none)* | `OBV` |
+| 44 | [PVI](#pvi) | MISO | Positive Volume Index | *(none)* | `PVI` |
+| 45 | [VPT](#vpt) | MISO | Volume Price Trend | *(none)* | `VPT` |
+| 46 | [VWAP](#vwap) | MISO | Volume Weighted Average Price | *(none)* | `VWAP` |
 
 ### Volatility Indicators
 
 | # | Indicator | Type | Description | Key Parameters | Output Columns |
 |---|-----------|------|-------------|----------------|----------------|
-| 44 | [ATR](#atr) | MISO | Average True Range | `n=14`, `ma_type=:EMA` | `ATR_n` |
-| 45 | [BB](#bb) | SIMO | Bollinger Bands | `n=14`, `num_std=2.0`, `ma_type=:SMA` | `BB_Center`, `BB_Upper`, `BB_Lower` |
+| 47 | [ATR](#atr) | MISO | Average True Range | `n=14`, `ma_type=:EMA` | `ATR_n` |
+| 48 | [BB](#bb) | SIMO | Bollinger Bands | `n=14`, `num_std=2.0`, `ma_type=:SMA` | `BB_Center`, `BB_Upper`, `BB_Lower` |
+| 49 | [MassIndex](#massindex) | MISO | Mass Index | `n=25`, `ema_period=9` | `MassIndex` |
+
+### Pivot Points
+
+| # | Indicator | Type | Description | Key Parameters | Output Columns |
+|---|-----------|------|-------------|----------------|----------------|
+| 50 | [PivotPoints](#pivotpoints) | MIMO | Pivot Points | `method=:Classic` | `PivotPoints_Pivot`, `_R1`, `_R2`, `_R3`, `_S1`, `_S2`, `_S3` |
 
 **Type legend**: SISO = Single Input Single Output, MISO = Multiple Input Single Output, SIMO = Single Input Multiple Output, MIMO = Multiple Input Multiple Output.
 
@@ -564,6 +574,34 @@ Supertrend(ts; n=10, mult=2.0)    # tighter bands
 
 ---
 
+### Vortex
+
+**Vortex Indicator** -- identifies trend direction and strength using positive and negative vortex movement over a rolling window.
+
+| Property | Value |
+|----------|-------|
+| Type | MIMO |
+| Raw signature | `Vortex(prices::Matrix{Float64}; n::Int=14) -> Matrix{Float64}` |
+| Input fields | `[:High, :Low, :Close]` (configurable via `fields`) |
+| Parameters | `n=14` (lookback period for summing vortex movement and true range) |
+| Output columns | `Vortex_VIPlus`, `Vortex_VIMinus` |
+
+```julia
+Vortex(ts)             # defaults: n=14
+Vortex(ts; n=21)       # longer lookback
+```
+
+**Notes**:
+- VI+ = Sum(|High[t] - Low[t-1]|, n) / Sum(TR, n). VI- = Sum(|Low[t] - High[t-1]|, n) / Sum(TR, n).
+- VI+ > VI-: uptrend. VI- > VI+: downtrend.
+- VI+ crossing above VI- is a bullish signal; VI- crossing above VI+ is a bearish signal.
+- Values typically oscillate around 1.0 (range roughly 0.5 to 2.0).
+- Created by Etienne Botes and Douglas Siepman (2010).
+
+**See Also**: [`DMI`](#dmi), [`ATR`](#atr), [`Aroon`](#aroon)
+
+---
+
 ## Momentum Indicators
 
 ### CCI
@@ -590,6 +628,35 @@ CCI(ts; n=14)          # shorter period
 - Created by Donald Lambert (1980).
 
 **See Also**: [`RSI`](#rsi), [`ROC`](#roc), [`MFI`](#mfi)
+
+---
+
+### ConnorsRSI
+
+**Connors RSI** -- a composite momentum oscillator combining three normalized components: short-term RSI, streak RSI, and percentile rank of rate of change.
+
+| Property | Value |
+|----------|-------|
+| Type | SISO |
+| Raw signature | `ConnorsRSI(prices::Vector{Float64}; n_rsi::Int=3, n_streak::Int=2, n_pctrank::Int=100) -> Vector{Float64}` |
+| Input field | `:Close` (configurable via `field`) |
+| Parameters | `n_rsi=3` (RSI period for price), `n_streak=2` (RSI period for streak), `n_pctrank=100` (lookback for percentile rank of ROC) |
+| Output columns | `ConnorsRSI` |
+
+```julia
+ConnorsRSI(ts)                                          # defaults: n_rsi=3, n_streak=2, n_pctrank=100
+ConnorsRSI(ts; n_rsi=3, n_streak=2, n_pctrank=50)      # shorter percentile rank window
+```
+
+**Notes**:
+- CRSI = (RSI(Close, n_rsi) + RSI(Streak, n_streak) + PercentRank(ROC(1), n_pctrank)) / 3.
+- Streak counts consecutive up/down closes (resets to 0 on equal close).
+- PercentRank measures the percentage of previous n_pctrank ROC values strictly less than the current ROC.
+- Oscillates between 0 and 100. Overbought: CRSI >= 90. Oversold: CRSI <= 10.
+- Designed for short-term mean-reversion strategies on equities and ETFs.
+- Created by Larry Connors.
+
+**See Also**: [`RSI`](#rsi), [`ROC`](#roc)
 
 ---
 
@@ -817,6 +884,34 @@ Stoch(ts; ma_type=:EMA)                            # EMA smoothing
 ```
 
 **See Also**: [`StochRSI`](#stochrsi), [`WR`](#wr), [`RSI`](#rsi)
+
+---
+
+### UltimateOsc
+
+**Ultimate Oscillator** -- a multi-timeframe momentum oscillator that combines buying pressure over three different periods to reduce false signals.
+
+| Property | Value |
+|----------|-------|
+| Type | MISO |
+| Raw signature | `UltimateOsc(prices::Matrix{Float64}; fast::Int=7, medium::Int=14, slow::Int=28) -> Vector{Float64}` |
+| Input fields | `[:High, :Low, :Close]` (configurable via `fields`) |
+| Parameters | `fast=7` (short period), `medium=14` (medium period), `slow=28` (long period) |
+| Output columns | `UltimateOsc` |
+
+```julia
+UltimateOsc(ts)                                # defaults: fast=7, medium=14, slow=28
+UltimateOsc(ts; fast=5, medium=10, slow=20)    # custom periods
+```
+
+**Notes**:
+- Oscillates between 0 and 100. Overbought: UO > 70. Oversold: UO < 30.
+- UO = 100 * (4 * avg_fast + 2 * avg_medium + avg_slow) / 7, where each avg = Sum(BP) / Sum(TR) over the respective period.
+- BP (Buying Pressure) = Close - True Low. TR = True Range.
+- Combines three timeframes to reduce false divergence signals common in single-period oscillators.
+- Created by Larry Williams (1976).
+
+**See Also**: [`RSI`](#rsi), [`ATR`](#atr), [`Stoch`](#stoch)
 
 ---
 
@@ -1193,6 +1288,69 @@ BB(ts; n=20, num_std=3.0, ma_type=:EMA)   # wide bands with EMA
 
 ---
 
+### MassIndex
+
+**Mass Index** -- a volatility indicator that detects trend reversals by measuring the narrowing and widening of the range between high and low prices.
+
+| Property | Value |
+|----------|-------|
+| Type | MISO |
+| Raw signature | `MassIndex(prices::Matrix{Float64}; n::Int=25, ema_period::Int=9) -> Vector{Float64}` |
+| Input fields | `[:High, :Low]` (configurable via `fields`) |
+| Parameters | `n=25` (summation period for rolling sum of EMA ratio), `ema_period=9` (EMA smoothing period for high-low range) |
+| Output columns | `MassIndex` |
+
+```julia
+MassIndex(ts)                          # defaults: n=25, ema_period=9
+MassIndex(ts; n=25, ema_period=9)      # explicit defaults
+```
+
+**Notes**:
+- MI = Sum(Single_EMA(range) / Double_EMA(range), n), where range = High - Low.
+- Typically oscillates around 25 (since it sums ~25 ratios near 1.0).
+- A "reversal bulge" occurs when MI rises above 27 then drops below 26.5, signaling a probable trend reversal.
+- Direction of reversal is determined by other indicators (e.g., moving average crossover).
+- Created by Donald Dorsey (1992).
+
+**See Also**: [`ATR`](#atr), [`EMA`](#ema), [`BB`](#bb)
+
+---
+
+## Pivot Points
+
+### PivotPoints
+
+**Pivot Points** -- calculates support and resistance levels from high, low, close, and open prices using five different methods.
+
+| Property | Value |
+|----------|-------|
+| Type | MIMO |
+| Raw signature | `PivotPoints(prices::Matrix{Float64}; method::Symbol=:Classic) -> Matrix{Float64}` |
+| Input fields | `[:High, :Low, :Close, :Open]` (configurable via `fields`) |
+| Parameters | `method=:Classic` (calculation method: `:Classic`, `:Fibonacci`, `:Woodie`, `:Camarilla`, `:DeMark`) |
+| Output columns | `PivotPoints_Pivot`, `PivotPoints_R1`, `PivotPoints_R2`, `PivotPoints_R3`, `PivotPoints_S1`, `PivotPoints_S2`, `PivotPoints_S3` |
+
+```julia
+PivotPoints(ts)                        # defaults: method=:Classic
+PivotPoints(ts; method=:Fibonacci)     # Fibonacci retracement levels
+PivotPoints(ts; method=:Woodie)        # Woodie pivots (weights Open)
+PivotPoints(ts; method=:Camarilla)     # Camarilla levels (centered on Close)
+PivotPoints(ts; method=:DeMark)        # DeMark pivots (R2/R3/S2/S3 are NaN)
+```
+
+**Notes**:
+- **Classic**: P = (H + L + C) / 3. Standard floor trader pivots.
+- **Fibonacci**: Same P as Classic; R/S levels use Fibonacci ratios (0.382, 0.618, 1.000) of range.
+- **Woodie**: P = (H + L + 2*O) / 4. Weights current Open price.
+- **Camarilla**: Same P as Classic; R/S levels centered on Close using range fractions (1.1/12, 1.1/6, 1.1/4).
+- **DeMark**: Conditional formula based on Open vs Close relationship. Only P, R1, S1 are calculated; R2/R3/S2/S3 are NaN.
+- Each bar is computed independently from its own HLCO values (no lookback needed).
+- S3 < S2 < S1 < Pivot < R1 < R2 < R3 (for Classic, Fibonacci, Camarilla with normal data).
+
+**See Also**: [`BB`](#bb), [`KeltnerChannel`](#keltnerchannel), [`DonchianChannel`](#donchianchannel)
+
+---
+
 ## Indicator Relationships
 
 The following diagram shows how indicators relate to and build upon each other:
@@ -1242,14 +1400,21 @@ ForceIndex ── (EMA of price-change * volume)
 EMV  ─── (SMA of distance moved / box ratio)
 
 Stoch ── (MIMO: %K and %D from High/Low/Close)
+UltimateOsc ── (3-period weighted buying pressure / true range)
 WR ───── (MIMO: Williams %R from High/Low/Close)
 BB ───── (SIMO: Center/Upper/Lower bands)
  └── SqueezeMomentum (BB inside KC detection + linreg momentum)
+MassIndex ── (sum of single EMA / double EMA of H-L range)
+
+ConnorsRSI ── (RSI + Streak RSI + PercentRank(ROC))
+ └── depends on RSI and ROC
 
 DonchianChannel ── (rolling highest high / lowest low)
 Aroon ──────────── (bars since highest high / lowest low)
 ParabolicSAR ───── (accelerating stop-and-reverse)
 Ichimoku ────────── (5-component cloud: Tenkan/Kijun/SenkouA/SenkouB/Chikou)
+Vortex ─────────── (VM+/VM- normalized by True Range)
+PivotPoints ────── (P/R1-R3/S1-S3 from HLCO; 5 methods)
 ```
 
 ---
@@ -1258,12 +1423,13 @@ Ichimoku ────────── (5-component cloud: Tenkan/Kijun/SenkouA
 
 | Required Columns | Indicators |
 |-----------------|------------|
-| `:Close` only | SMA, EMA, DEMA, TEMA, T3, WMA, HMA, ZLEMA, SMMA, KAMA, JMA, ALMA, RSI, StochRSI, MACD, MACD3, BB, ROC, DPO, PPO, KST |
+| `:Close` only | SMA, EMA, DEMA, TEMA, T3, WMA, HMA, ZLEMA, SMMA, KAMA, JMA, ALMA, RSI, StochRSI, MACD, MACD3, BB, ROC, DPO, PPO, KST, ConnorsRSI |
 | `:Close`, `:Volume` | OBV, ForceIndex, NVI, PVI, VPT |
-| `:High`, `:Low` | Aroon, ParabolicSAR |
-| `:High`, `:Low`, `:Close` | ATR, Stoch, WR, DonchianChannel, KeltnerChannel, Supertrend, DMI, Ichimoku, SqueezeMomentum, CCI |
+| `:High`, `:Low` | Aroon, ParabolicSAR, MassIndex |
+| `:High`, `:Low`, `:Close` | ATR, Stoch, WR, DonchianChannel, KeltnerChannel, Supertrend, DMI, Ichimoku, SqueezeMomentum, CCI, UltimateOsc, Vortex |
 | `:High`, `:Low`, `:Volume` | EMV |
 | `:High`, `:Low`, `:Close`, `:Volume` | ADL, ChaikinOsc, CMF, MFI, VWAP |
+| `:High`, `:Low`, `:Close`, `:Open` | PivotPoints |
 
 ---
 
@@ -1275,7 +1441,8 @@ Ichimoku ────────── (5-component cloud: Tenkan/Kijun/SenkouA
 | `field` | `Symbol` | `:Close`, `:Volume` | All SISO/SIMO indicators |
 | `fields` | `Vector{Symbol}` | `[:High, :Low, :Close]` | All MISO/MIMO indicators |
 | `ma_type` | `Symbol` | `:SMA`, `:EMA`, `:SMMA`, `:RMA`, `:WMA` | RSI, ATR, BB, Stoch, StochRSI, KeltnerChannel, MACD3 |
-| `fast` / `slow` | `Int` | 2-30 | MACD, MACD3, ChaikinOsc, KAMA, PPO |
+| `fast` / `slow` | `Int` | 2-30 | MACD, MACD3, ChaikinOsc, KAMA, PPO, UltimateOsc |
+| `medium` | `Int` | 14, 20 | MACD3, UltimateOsc |
 | `signal` | `Int` | 9 | MACD, PPO, KST |
 | `k_smooth` / `d_smooth` | `Int` | 3 | Stoch, StochRSI |
 | `num_std` | `Float64` | 1.0, 2.0, 3.0 | BB |
@@ -1283,10 +1450,13 @@ Ichimoku ────────── (5-component cloud: Tenkan/Kijun/SenkouA
 | `sigma` | `Float64` | 6.0 | ALMA |
 | `phase` | `Float64` | -100.0 to 100.0 | JMA |
 | `a` | `Float64` | 0.7 | T3 |
-| `middle` | `Int` | 20 | MACD3 |
+
 | `mult` | `Float64` | 1.5, 2.0, 3.0 | KeltnerChannel, Supertrend |
 | `bb_mult` / `kc_mult` | `Float64` | 1.5, 2.0 | SqueezeMomentum |
 | `af_start` / `af_step` / `af_max` | `Float64` | 0.02, 0.02, 0.20 | ParabolicSAR |
 | `tenkan` / `kijun` / `senkou_b` | `Int` | 9, 26, 52 | Ichimoku |
 | `displacement` | `Int` | 26 | Ichimoku |
+| `n_rsi` / `n_streak` / `n_pctrank` | `Int` | 3, 2, 100 | ConnorsRSI |
+| `ema_period` | `Int` | 9 | MassIndex |
+| `method` | `Symbol` | `:Classic`, `:Fibonacci`, `:Woodie`, `:Camarilla`, `:DeMark` | PivotPoints |
 | `r1`-`r4` / `s1`-`s4` | `Int` | 10, 13, 15, 20 | KST |
