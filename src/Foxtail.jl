@@ -2,6 +2,7 @@ module Foxtail
 
 using TSFrames, LinearAlgebra
 
+
 export
 	CircBuff, CircDeque, MinMaxQueue,
 	# functions

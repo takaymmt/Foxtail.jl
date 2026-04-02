@@ -745,4 +745,230 @@ data_ts = aapl[end-100:end]
         @test ichimoku_aapl isa TSFrame
         @test nrow(ichimoku_aapl) == nrow(data_ts) + 26
     end
+
+    @testset "Vortex" begin
+        # Type checks: Matrix input returns Matrix output
+        @test Vortex(vec3) isa Matrix{Float64}
+        vx = Vortex(vec3)
+        @test size(vx, 2) == 2  # [VIPlus, VIMinus]
+
+        # TSFrame input returns TSFrame output
+        res = Vortex(data_ts)
+        @test res isa TSFrame
+        @test names(res)[1] == "Vortex_VIPlus"
+        @test names(res)[2] == "Vortex_VIMinus"
+
+        # Custom parameters
+        @test Vortex(data_ts; n=21) isa TSFrame
+
+        # Length check
+        @test size(vx, 1) == length(_high_col)
+
+        # No Inf check
+        @test !any(isinf, vx)
+        @test all(isfinite, vx)
+
+        # Bar 1 should be 0.0 (no previous bar -> vm_plus=0, vm_minus=0, tr=H-L only)
+        # With n=14 default, bar 1 has only 1 element in window.
+        # vm_plus[1]=0, vm_minus[1]=0, tr[1]=H[1]-L[1]
+        # vi_plus[1] = 0/tr[1] = 0, vi_minus[1] = 0/tr[1] = 0
+        @test vx[1, 1] == 0.0
+        @test vx[1, 2] == 0.0
+
+        # Behavioral test: strong uptrend data -> VI+ should be > VI-
+        uptrend = zeros(30, 3)
+        for i in 1:30
+            base = 50.0 + Float64(i) * 2.0
+            uptrend[i, 1] = base + 1.0   # High
+            uptrend[i, 2] = base - 1.0   # Low
+            uptrend[i, 3] = base          # Close
+        end
+        vx_up = Vortex(uptrend; n=14)
+        # After warmup, VI+ should dominate
+        @test vx_up[end, 1] > vx_up[end, 2]
+
+        # Behavioral test: strong downtrend data -> VI- should be > VI+
+        downtrend = zeros(30, 3)
+        for i in 1:30
+            base = 150.0 - Float64(i) * 2.0
+            downtrend[i, 1] = base + 1.0   # High
+            downtrend[i, 2] = base - 1.0   # Low
+            downtrend[i, 3] = base          # Close
+        end
+        vx_down = Vortex(downtrend; n=14)
+        @test vx_down[end, 2] > vx_down[end, 1]
+
+        # Hand-calculated test with small data
+        # 5 bars: H=[10,12,11,13,14], L=[8,9,8,10,11], C=[9,11,9,12,13]
+        small = [10.0 8.0 9.0; 12.0 9.0 11.0; 11.0 8.0 9.0; 13.0 10.0 12.0; 14.0 11.0 13.0]
+        vx_s = Vortex(small; n=3)
+        # Bar 1: vm+=0, vm-=0, tr=10-8=2
+        @test vx_s[1, 1] == 0.0
+        @test vx_s[1, 2] == 0.0
+        # Bar 2: vm+=|12-8|=4, vm-=|9-10|=1, tr=max(12-9,|12-9|,|9-9|)=3
+        # Bar 3: vm+=|11-9|=2, vm-=|8-12|=4, tr=max(11-8,|11-11|,|8-11|)=3
+        # Bar 4 (n=3 window covers bars 2,3,4):
+        #   vm+[4]=|13-8|=5, vm-[4]=|10-11|=1, tr[4]=max(13-10,|13-9|,|10-9|)=4
+        #   sum_vm+ = 4+2+5=11, sum_vm- = 1+4+1=6, sum_tr = 3+3+4=10
+        #   vi+ = 11/10 = 1.1, vi- = 6/10 = 0.6
+        @test vx_s[4, 1] ≈ 1.1 atol=1e-10
+        @test vx_s[4, 2] ≈ 0.6 atol=1e-10
+
+        # Input validation
+        @test_throws ArgumentError Vortex(rand(10, 2))  # wrong column count
+        @test_throws ArgumentError Vortex(rand(10, 4))  # wrong column count
+        @test_throws ArgumentError Vortex(rand(10, 3); n=0)  # invalid period
+
+        # AAPL smoke test
+        vortex_aapl = Vortex(data_ts)
+        @test vortex_aapl isa TSFrame
+        @test size(vortex_aapl)[1] == size(data_ts)[1]
+    end
+
+    # Open column data for PivotPoints tests (same length as _high_col)
+    _open_col = [
+        50.0, 50.8, 49.3, 51.8, 52.6, 51.2, 53.7, 54.6, 52.9, 55.5,
+        56.4, 54.5, 57.5, 58.7, 56.3, 59.6, 60.8, 58.4, 61.7, 62.9,
+        60.5, 63.8, 65.0, 62.6, 65.9, 67.1, 64.7, 68.0, 69.2, 66.8,
+        70.0, 70.8, 68.5, 72.0, 72.8, 70.4, 74.1, 74.9, 72.7, 76.0,
+        76.8, 74.6, 77.7, 78.5, 76.3, 79.6, 80.4, 78.2, 81.5, 82.3,
+        80.1, 83.4, 84.2, 82.0, 85.3, 86.1, 83.9, 87.2, 88.0, 85.8,
+        88.9, 89.7, 87.5, 90.8, 91.6, 89.4, 92.7, 93.5, 91.3, 94.6,
+        95.4, 93.2, 96.5, 97.3, 95.1, 98.4, 99.2, 97.0, 100.3, 101.1,
+        98.9, 102.0, 102.8, 100.6, 103.9, 104.7, 102.5, 105.8, 106.6, 104.4,
+        107.7, 108.5, 106.3, 109.6, 110.4, 108.2, 111.5, 112.3, 110.1, 113.4
+    ]
+
+    vec4 = hcat(_high_col, _low_col, _close_col, _open_col)
+
+    @testset "PivotPoints" begin
+        # Type checks: Matrix input returns Matrix output
+        @test PivotPoints(vec4) isa Matrix{Float64}
+        pp = PivotPoints(vec4)
+        @test size(pp, 2) == 7  # [Pivot, R1, R2, R3, S1, S2, S3]
+
+        # TSFrame input returns TSFrame output
+        res = PivotPoints(data_ts)
+        @test res isa TSFrame
+        @test names(res) == ["PivotPoints_Pivot", "PivotPoints_R1", "PivotPoints_R2",
+                             "PivotPoints_R3", "PivotPoints_S1", "PivotPoints_S2", "PivotPoints_S3"]
+
+        # No Inf check
+        @test !any(isinf, pp)
+
+        # --- Classic method: hand-calculated ---
+        # Single bar: H=110, L=100, C=105, O=102
+        single = [110.0 100.0 105.0 102.0]
+        pp_c = PivotPoints(single; method=:Classic)
+        P_c = (110.0 + 100.0 + 105.0) / 3.0  # = 105.0
+        @test pp_c[1, 1] ≈ P_c atol=1e-10             # Pivot
+        @test pp_c[1, 2] ≈ 2.0 * P_c - 100.0 atol=1e-10  # R1 = 110.0
+        @test pp_c[1, 3] ≈ P_c + 10.0 atol=1e-10      # R2 = 115.0
+        @test pp_c[1, 4] ≈ 110.0 + 2.0 * (P_c - 100.0) atol=1e-10  # R3 = 120.0
+        @test pp_c[1, 5] ≈ 2.0 * P_c - 110.0 atol=1e-10  # S1 = 100.0
+        @test pp_c[1, 6] ≈ P_c - 10.0 atol=1e-10      # S2 = 95.0
+        @test pp_c[1, 7] ≈ 100.0 - 2.0 * (110.0 - P_c) atol=1e-10  # S3 = 90.0
+
+        # Classic level ordering: S3 < S2 < S1 < P < R1 < R2 < R3
+        @test pp_c[1, 7] < pp_c[1, 6] < pp_c[1, 5] < pp_c[1, 1] < pp_c[1, 2] < pp_c[1, 3] < pp_c[1, 4]
+
+        # --- Fibonacci method: hand-calculated ---
+        pp_f = PivotPoints(single; method=:Fibonacci)
+        P_f = (110.0 + 100.0 + 105.0) / 3.0  # = 105.0
+        R_f = 10.0  # H - L
+        @test pp_f[1, 1] ≈ P_f atol=1e-10
+        @test pp_f[1, 2] ≈ P_f + 0.382 * R_f atol=1e-10  # R1 = 108.82
+        @test pp_f[1, 3] ≈ P_f + 0.618 * R_f atol=1e-10  # R2 = 111.18
+        @test pp_f[1, 4] ≈ P_f + 1.000 * R_f atol=1e-10  # R3 = 115.0
+        @test pp_f[1, 5] ≈ P_f - 0.382 * R_f atol=1e-10  # S1 = 101.18
+        @test pp_f[1, 6] ≈ P_f - 0.618 * R_f atol=1e-10  # S2 = 98.82
+        @test pp_f[1, 7] ≈ P_f - 1.000 * R_f atol=1e-10  # S3 = 95.0
+
+        # Fibonacci level ordering
+        @test pp_f[1, 7] < pp_f[1, 6] < pp_f[1, 5] < pp_f[1, 1] < pp_f[1, 2] < pp_f[1, 3] < pp_f[1, 4]
+
+        # --- Woodie method: uses Open, NOT Close ---
+        pp_w = PivotPoints(single; method=:Woodie)
+        P_w = (110.0 + 100.0 + 2.0 * 102.0) / 4.0  # = 103.5 (uses Open=102)
+        @test pp_w[1, 1] ≈ P_w atol=1e-10
+        @test pp_w[1, 2] ≈ 2.0 * P_w - 100.0 atol=1e-10  # R1 = 107.0
+        @test pp_w[1, 3] ≈ P_w + 10.0 atol=1e-10      # R2 = 113.5
+        @test pp_w[1, 5] ≈ 2.0 * P_w - 110.0 atol=1e-10  # S1 = 97.0
+
+        # Woodie P differs from Classic P
+        @test P_w != P_c
+
+        # --- Camarilla method ---
+        pp_cam = PivotPoints(single; method=:Camarilla)
+        P_cam = (110.0 + 100.0 + 105.0) / 3.0
+        R_cam = 10.0
+        C_cam = 105.0
+        @test pp_cam[1, 1] ≈ P_cam atol=1e-10
+        @test pp_cam[1, 2] ≈ C_cam + 1.1 * R_cam / 12.0 atol=1e-10  # R1
+        @test pp_cam[1, 3] ≈ C_cam + 1.1 * R_cam / 6.0 atol=1e-10   # R2
+        @test pp_cam[1, 4] ≈ C_cam + 1.1 * R_cam / 4.0 atol=1e-10   # R3
+        @test pp_cam[1, 5] ≈ C_cam - 1.1 * R_cam / 12.0 atol=1e-10  # S1
+        @test pp_cam[1, 6] ≈ C_cam - 1.1 * R_cam / 6.0 atol=1e-10   # S2
+        @test pp_cam[1, 7] ≈ C_cam - 1.1 * R_cam / 4.0 atol=1e-10   # S3
+
+        # Camarilla level ordering
+        @test pp_cam[1, 7] < pp_cam[1, 6] < pp_cam[1, 5] < pp_cam[1, 1] < pp_cam[1, 2] < pp_cam[1, 3] < pp_cam[1, 4]
+
+        # --- DeMark method ---
+        # Case 1: C < O -> X = H + 2L + C
+        demark1 = [110.0 100.0 101.0 108.0]  # C=101 < O=108
+        pp_d1 = PivotPoints(demark1; method=:DeMark)
+        X1 = 110.0 + 2.0 * 100.0 + 101.0  # = 411.0
+        @test pp_d1[1, 1] ≈ X1 / 4.0 atol=1e-10       # Pivot = 102.75
+        @test pp_d1[1, 2] ≈ X1 / 2.0 - 100.0 atol=1e-10  # R1 = 105.5
+        @test pp_d1[1, 5] ≈ X1 / 2.0 - 110.0 atol=1e-10  # S1 = 95.5
+        # R2, R3, S2, S3 should be NaN
+        @test isnan(pp_d1[1, 3])
+        @test isnan(pp_d1[1, 4])
+        @test isnan(pp_d1[1, 6])
+        @test isnan(pp_d1[1, 7])
+
+        # Case 2: C > O -> X = 2H + L + C
+        demark2 = [110.0 100.0 108.0 101.0]  # C=108 > O=101
+        pp_d2 = PivotPoints(demark2; method=:DeMark)
+        X2 = 2.0 * 110.0 + 100.0 + 108.0  # = 428.0
+        @test pp_d2[1, 1] ≈ X2 / 4.0 atol=1e-10       # Pivot = 107.0
+        @test pp_d2[1, 2] ≈ X2 / 2.0 - 100.0 atol=1e-10  # R1 = 114.0
+        @test pp_d2[1, 5] ≈ X2 / 2.0 - 110.0 atol=1e-10  # S1 = 104.0
+
+        # Case 3: C == O -> X = H + L + 2C
+        demark3 = [110.0 100.0 105.0 105.0]  # C=105 == O=105
+        pp_d3 = PivotPoints(demark3; method=:DeMark)
+        X3 = 110.0 + 100.0 + 2.0 * 105.0  # = 420.0
+        @test pp_d3[1, 1] ≈ X3 / 4.0 atol=1e-10       # Pivot = 105.0
+        @test pp_d3[1, 2] ≈ X3 / 2.0 - 100.0 atol=1e-10  # R1 = 110.0
+        @test pp_d3[1, 5] ≈ X3 / 2.0 - 110.0 atol=1e-10  # S1 = 100.0
+
+        # DeMark: Pivot column should NOT be NaN, R2/R3/S2/S3 should be NaN
+        pp_d_multi = PivotPoints(vec4; method=:DeMark)
+        @test !any(isnan, pp_d_multi[:, 1])  # Pivot
+        @test !any(isnan, pp_d_multi[:, 2])  # R1
+        @test !any(isnan, pp_d_multi[:, 5])  # S1
+        @test all(isnan, pp_d_multi[:, 3])   # R2
+        @test all(isnan, pp_d_multi[:, 4])   # R3
+        @test all(isnan, pp_d_multi[:, 6])   # S2
+        @test all(isnan, pp_d_multi[:, 7])   # S3
+
+        # All methods should work with TSFrame
+        @test PivotPoints(data_ts; method=:Classic) isa TSFrame
+        @test PivotPoints(data_ts; method=:Fibonacci) isa TSFrame
+        @test PivotPoints(data_ts; method=:Woodie) isa TSFrame
+        @test PivotPoints(data_ts; method=:Camarilla) isa TSFrame
+        @test PivotPoints(data_ts; method=:DeMark) isa TSFrame
+
+        # Input validation
+        @test_throws ArgumentError PivotPoints(rand(10, 3))  # wrong column count
+        @test_throws ArgumentError PivotPoints(rand(10, 2))  # wrong column count
+        @test_throws ArgumentError PivotPoints(rand(10, 4); method=:Invalid)  # invalid method
+
+        # AAPL smoke test
+        pp_aapl = PivotPoints(data_ts)
+        @test pp_aapl isa TSFrame
+        @test size(pp_aapl)[1] == size(data_ts)[1]
+    end
 end

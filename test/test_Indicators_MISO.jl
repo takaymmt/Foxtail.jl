@@ -719,4 +719,124 @@ data_ts = aapl[end-100:end]
         @test emv_aapl isa TSFrame
         @test size(emv_aapl)[1] == size(data_ts)[1]
     end
+
+    @testset "MassIndex" begin
+        vec2_hl = hcat(_high_col, _low_col)
+
+        # Type checks
+        @test MassIndex(vec2_hl) isa Vector{Float64}
+        @test MassIndex(vec2_hl; n=10, ema_period=5) isa Vector{Float64}
+
+        # TSFrame wrapper
+        res = MassIndex(data_ts)
+        @test res isa TSFrame
+        @test names(res)[1] == "MassIndex_25"
+        res2 = MassIndex(data_ts; n=10)
+        @test names(res2)[1] == "MassIndex_10"
+
+        # Length check
+        @test length(MassIndex(vec2_hl)) == 100
+
+        # No Inf in output
+        mi_result = MassIndex(vec2_hl)
+        @test !any(isinf, mi_result)
+
+        # Numerical validation with small known input
+        # range = [5, 4, 3, 4, 5]
+        # single_ema(period=2): alpha warmup: r[1]=5, r[2]=5*0.333+4*0.667≈4.333, ...
+        # We validate properties rather than exact intermediate EMA values
+        mi_data = Float64[10 5; 12 8; 11 8; 13 9; 15 10]
+        r = MassIndex(mi_data; n=3, ema_period=2)
+        @test length(r) == 5
+        @test r[1] > 0.0  # first bar: ratio is single_ema/double_ema = data[1]/data[1] = 1.0, sum=1.0
+        @test r[1] ≈ 1.0 atol=1e-10  # bar 1: single_ema=double_ema=range[1], ratio=1.0, sum=1.0
+
+        # Constant range: single_ema ≈ double_ema ≈ range, ratio ≈ 1.0, MI ≈ n
+        const_data = Float64[10 8; 12 10; 14 12; 16 14; 18 16; 20 18; 22 20; 24 22; 26 24; 28 26]
+        r_const = MassIndex(const_data; n=5, ema_period=3)
+        # After warmup, all ratios converge to 1.0, so MI converges to n=5
+        @test r_const[end] ≈ 5.0 atol=0.1
+
+        # All values should be finite and non-negative
+        @test all(isfinite, mi_result)
+        @test all(v -> v >= 0.0, mi_result)
+
+        # AAPL smoke test
+        mi_aapl = MassIndex(data_ts)
+        @test mi_aapl isa TSFrame
+        @test size(mi_aapl)[1] == size(data_ts)[1]
+        r_aapl = MassIndex(data_ts[:, [:High, :Low]] |> Matrix)
+        @test all(isfinite, r_aapl)
+
+        # Input validation
+        @test_throws ArgumentError MassIndex(rand(10, 3))   # wrong column count
+        @test_throws ArgumentError MassIndex(rand(10, 2); n=0)  # n must be positive
+        @test_throws ArgumentError MassIndex(rand(10, 2); ema_period=0)  # ema_period must be positive
+    end
+
+    @testset "UltimateOsc" begin
+        # Type checks
+        @test UltimateOsc(vec3) isa Vector{Float64}
+        @test UltimateOsc(vec3; fast=5, medium=10, slow=20) isa Vector{Float64}
+
+        # TSFrame wrapper
+        res = UltimateOsc(data_ts)
+        @test res isa TSFrame
+        @test names(res)[1] == "UltimateOsc"
+
+        # Length check
+        @test length(UltimateOsc(vec3)) == 100
+
+        # No Inf in output
+        uo_result = UltimateOsc(vec3)
+        @test !any(isinf, uo_result)
+
+        # Numerical validation with small known input
+        # [High Low Close]: bar 1 has no prev close -> bp=0
+        uo_data = Float64[10 8 9; 12 9 11; 11 8 10; 13 10 12; 14 11 13]
+        r = UltimateOsc(uo_data; fast=2, medium=3, slow=4)
+        @test length(r) == 5
+
+        # Bar 1: bp=0, tr=H-L=2. All sums have bp=0, so UO=0
+        @test r[1] ≈ 0.0 atol=1e-10
+
+        # Bar 2: true_low=min(9, 9)=9, bp=11-9=2, tr=max(12,9)-min(9,9)=3
+        # fast(2): sum_bp=[0,2]=2, sum_tr=[2,3]=5 -> avg=2/5=0.4
+        # medium(3): sum_bp=[0,2]=2, sum_tr=[2,3]=5 -> avg=2/5=0.4
+        # slow(4): sum_bp=[0,2]=2, sum_tr=[2,3]=5 -> avg=2/5=0.4
+        # UO = 100*(4*0.4 + 2*0.4 + 0.4)/7 = 100*2.8/7 = 40.0
+        @test r[2] ≈ 40.0 atol=1e-10
+
+        # Bar 3: true_low=min(8,11)=8, bp=10-8=2, tr=max(11,11)-min(8,11)=3
+        # fast(2): sum_bp=[2,2]=4, sum_tr=[3,3]=6 -> avg=4/6=2/3
+        # medium(3): sum_bp=[0,2,2]=4, sum_tr=[2,3,3]=8 -> avg=4/8=0.5
+        # slow(4): sum_bp=[0,2,2]=4, sum_tr=[2,3,3]=8 -> avg=4/8=0.5
+        # UO = 100*(4*(2/3) + 2*0.5 + 0.5)/7 = 100*(8/3 + 1.5)/7
+        expected_bar3 = 100.0 * (4.0 * (4.0/6.0) + 2.0 * (4.0/8.0) + 1.0 * (4.0/8.0)) / 7.0
+        @test r[3] ≈ expected_bar3 atol=1e-10
+
+        # All values should be finite
+        @test all(isfinite, uo_result)
+
+        # Range check: UO is in [0, 100] for normal market data
+        @test all(v -> 0.0 <= v <= 100.0, uo_result)
+
+        # Constant price (H==L==C): all bp=0, all tr=0 -> UO=0 (guarded)
+        const_data = Float64[10 10 10; 10 10 10; 10 10 10; 10 10 10; 10 10 10]
+        r_const = UltimateOsc(const_data; fast=2, medium=3, slow=4)
+        @test all(r_const .≈ 0.0)
+
+        # AAPL smoke test
+        uo_aapl = UltimateOsc(data_ts)
+        @test uo_aapl isa TSFrame
+        @test size(uo_aapl)[1] == size(data_ts)[1]
+        r_aapl = UltimateOsc(data_ts[:, [:High, :Low, :Close]] |> Matrix)
+        @test all(isfinite, r_aapl)
+
+        # Input validation
+        @test_throws ArgumentError UltimateOsc(rand(10, 2))       # wrong column count
+        @test_throws ArgumentError UltimateOsc(rand(10, 3); fast=0)    # fast must be positive
+        @test_throws ArgumentError UltimateOsc(rand(10, 3); medium=0)  # medium must be positive
+        @test_throws ArgumentError UltimateOsc(rand(10, 3); slow=0)    # slow must be positive
+    end
 end

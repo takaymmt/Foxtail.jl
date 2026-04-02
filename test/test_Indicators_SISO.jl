@@ -401,4 +401,73 @@ data_ts = aapl[end-100:end]
         # For i = 7: DPO[7] = prices[7] - SMA[4] = 7.0 - SMA[4]
         @test r_small[7] ≈ small[7] - sma4[4] atol=1e-10
     end
+
+    @testset "ConnorsRSI" begin
+        # 1. Type and column name checks (TSFrame wrapper)
+        result = ConnorsRSI(data_ts)
+        @test result isa TSFrame
+        @test names(result) == ["ConnorsRSI"]
+        @test nrow(result) == nrow(data_ts)
+
+        # 2. Vector interface
+        close_vec = collect(Float64, data_ts[:, :Close])
+        result_vec = ConnorsRSI(close_vec)
+        @test result_vec isa Vector{Float64}
+        @test length(result_vec) == length(close_vec)
+
+        # 3. No Inf / NaN check
+        @test !any(isinf, result_vec)
+        @test !any(isnan, result_vec)
+
+        # 4. Range check: valid (non-warmup) output in [0, 100]
+        valid_vals = filter(!=(0.0), result_vec)
+        @test all(0.0 .<= valid_vals .<= 100.0)
+
+        # 5. Streak helper test (isolated)
+        streak_test = Foxtail._streak([1.0, 2.0, 3.0, 2.0, 2.0, 1.0])
+        # prices:    1, 2, 3, 2, 2, 1
+        # expected:  0, 1, 2, -1, 0, -1  (equal close → reset to 0)
+        @test streak_test[1] == 0.0
+        @test streak_test[2] == 1.0
+        @test streak_test[3] == 2.0
+        @test streak_test[4] == -1.0
+        @test streak_test[5] == 0.0   # equal → reset!
+        @test streak_test[6] == -1.0
+
+        # 6. Streak helper: longer sequence with mixed patterns
+        streak_long = Foxtail._streak([5.0, 6.0, 7.0, 7.0, 6.0, 5.0, 5.0, 6.0])
+        @test streak_long == [0.0, 1.0, 2.0, 0.0, -1.0, -2.0, 0.0, 1.0]
+
+        # 7. PercentRank helper test (isolated)
+        # With data [1.0, 3.0, 2.0] and lookback=10:
+        # pct_rank[1] = 0.0 (no previous)
+        # pct_rank[2] = 100.0 (3.0 > 1.0, 1 out of 1 = 100%)
+        # pct_rank[3] = 50.0 (2.0 > 1.0 but < 3.0, 1 out of 2 = 50%)
+        pr_test = Foxtail._percentile_rank([1.0, 3.0, 2.0], 10)
+        @test pr_test[1] == 0.0
+        @test pr_test[2] == 100.0
+        @test pr_test[3] == 50.0
+
+        # 8. PercentRank: all equal values -> 0% (none strictly less)
+        pr_equal = Foxtail._percentile_rank([5.0, 5.0, 5.0, 5.0], 10)
+        @test pr_equal[2] == 0.0
+        @test pr_equal[4] == 0.0
+
+        # 9. PercentRank: strictly increasing -> 100% for each new bar
+        pr_inc = Foxtail._percentile_rank([1.0, 2.0, 3.0, 4.0], 10)
+        @test pr_inc[2] == 100.0
+        @test pr_inc[3] == 100.0
+        @test pr_inc[4] == 100.0
+
+        # 10. Custom parameters
+        r_custom = ConnorsRSI(close_vec; n_rsi=2, n_streak=3, n_pctrank=50)
+        @test r_custom isa Vector{Float64}
+        @test length(r_custom) == length(close_vec)
+
+        # 11. ArgumentError tests
+        @test_throws ArgumentError ConnorsRSI(rand(10); n_rsi=0)
+        @test_throws ArgumentError ConnorsRSI(rand(10); n_streak=0)
+        @test_throws ArgumentError ConnorsRSI(rand(10); n_pctrank=0)
+        @test_throws ArgumentError ConnorsRSI(rand(1))  # too short
+    end
 end

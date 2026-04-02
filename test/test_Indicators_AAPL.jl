@@ -18,6 +18,8 @@ using CSV
     hlcv    = hcat(highs, lows, closes, volumes)
     cv      = hcat(closes, volumes)
     hlv     = hcat(highs, lows, volumes)
+    opens   = Float64.(aapl[:, :Open])
+    hlco    = hcat(highs, lows, closes, opens)
 
     # Canary: verify expected dataset shape to catch accidental CSV updates
     @test nrow(aapl) == 335
@@ -579,5 +581,75 @@ using CSV
         @test ALMA(closes; n=10)[end] ≈ 211.69326096353495 atol=1e-6
         @test ZLEMA(closes; n=10)[end] ≈ 212.26832318053894 atol=1e-6
         @test T3(closes; n=10)[end] ≈ 212.87445899652994 atol=1e-6
+    end
+
+    @testset "AAPL: MassIndex" begin
+        mi = MassIndex(hl)
+        @test length(mi) == nrows
+        @test !any(isnan, mi) && !any(isinf, mi)
+
+        # Regression: spot checks
+        @test mi[100] ≈ 25.00717701518462 atol=1e-4
+        @test mi[200] ≈ 23.955931692054648 atol=1e-4
+        @test mi[300] ≈ 25.44483708653709 atol=1e-4
+        @test mi[end] ≈ 27.50931968791033 atol=1e-4
+    end
+
+    @testset "AAPL: UltimateOsc" begin
+        uo = UltimateOsc(hlc)
+        @test length(uo) == nrows
+        @test !any(isnan, uo) && !any(isinf, uo)
+
+        # Regression: spot checks
+        @test uo[100] ≈ 46.00659454053027 atol=1e-4
+        @test uo[200] ≈ 66.82115283477029 atol=1e-4
+        @test uo[300] ≈ 51.47234690733655 atol=1e-4
+        @test uo[end] ≈ 36.347119033481185 atol=1e-4
+    end
+
+    @testset "AAPL: Vortex" begin
+        vx = Vortex(hlc)
+        @test size(vx) == (nrows, 2)
+        @test !any(isnan, vx) && !any(isinf, vx)
+
+        # Regression: spot checks (VI+, VI-)
+        @test vx[100, 1] ≈ 0.9638647049114276 atol=1e-4
+        @test vx[100, 2] ≈ 0.9459149039532304 atol=1e-4
+        @test vx[200, 1] ≈ 0.9600797050577838 atol=1e-4
+        @test vx[200, 2] ≈ 0.737275210874243 atol=1e-4
+        @test vx[end, 1] ≈ 1.1512711964193445 atol=1e-4
+        @test vx[end, 2] ≈ 0.7507944544722869 atol=1e-4
+    end
+
+    @testset "AAPL: ConnorsRSI" begin
+        crsi = ConnorsRSI(closes)
+        @test length(crsi) == nrows
+        @test !any(isnan, crsi) && !any(isinf, crsi)
+
+        # Regression: spot checks
+        @test crsi[100] ≈ 61.064396250192885 atol=1e-4
+        @test crsi[200] ≈ 81.6366387559598 atol=1e-4
+        @test crsi[300] ≈ 72.01969056687044 atol=1e-4
+        @test crsi[end] ≈ 23.170820091580097 atol=1e-4
+    end
+
+    @testset "AAPL: PivotPoints" begin
+        pp = PivotPoints(hlco)
+        @test size(pp) == (nrows, 7)
+        @test !any(isnan, pp) && !any(isinf, pp)
+
+        # Regression: spot checks (Pivot column)
+        @test pp[100, 1] ≈ 193.30333455403647 atol=1e-4
+        @test pp[200, 1] ≈ 196.9366709391276 atol=1e-4
+        @test pp[300, 1] ≈ 182.42000325520834 atol=1e-4
+        @test pp[end, 1] ≈ 212.3300018310547 atol=1e-4
+
+        # Structural: S3 < S2 < S1 < P < R1 < R2 < R3
+        @test all(pp[:, 7] .< pp[:, 6])  # S3 < S2
+        @test all(pp[:, 6] .< pp[:, 5])  # S2 < S1
+        @test all(pp[:, 5] .< pp[:, 1])  # S1 < P
+        @test all(pp[:, 1] .< pp[:, 2])  # P < R1
+        @test all(pp[:, 2] .< pp[:, 3])  # R1 < R2
+        @test all(pp[:, 3] .< pp[:, 4])  # R2 < R3
     end
 end
