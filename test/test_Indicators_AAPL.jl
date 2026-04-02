@@ -19,6 +19,12 @@ using CSV
     cv      = hcat(closes, volumes)
     hlv     = hcat(highs, lows, volumes)
 
+    # Canary: verify expected dataset shape to catch accidental CSV updates
+    @test nrow(aapl) == 335
+    @test TSFrames.index(aapl)[1] == Date("2023-03-01")
+    @test TSFrames.index(aapl)[end] == Date("2024-06-28")
+    @test closes[end] ≈ 210.619995 atol=1e-4  # AAPL close on 2024-06-28
+
     @testset "AAPL: SMA" begin
         sma5 = SMA(closes; n=5)
         @test length(sma5) == nrows
@@ -560,7 +566,7 @@ using CSV
                 @test !any(isnan, ma)
                 @test !any(isinf, ma)
                 # All MAs should track price within reasonable range (AAPL ~145-220)
-                @test all(abs.(ma .- closes) .< 100.0)
+                @test all(abs.(ma .- closes) .< 50.0)
             end
         end
 

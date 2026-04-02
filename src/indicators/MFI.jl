@@ -80,7 +80,8 @@ result = MFI(prices; n=2)
         elseif tp[j] < tp[j-1]
             neg_mf[j] = mf[j]
         end
-        # tp[j] == tp[j-1] or j == 1: both remain 0.0 (neutral)
+        # tp[j] == tp[j-1]: both remain 0.0 (neutral)
+        # Note: j == 1 is not reached here; pos_mf[1]/neg_mf[1] stay 0.0 from initialization
     end
 
     pos_flow = 0.0
@@ -96,6 +97,10 @@ result = MFI(prices; n=2)
             pos_flow -= pos_mf[i - n]
             neg_flow -= neg_mf[i - n]
         end
+
+        # Clamp to zero: FP drift from repeated add/subtract can yield tiny negatives
+        pos_flow = max(0.0, pos_flow)
+        neg_flow = max(0.0, neg_flow)
 
         if neg_flow == 0.0 && pos_flow == 0.0
             results[i] = 100.0  # No flow at all (e.g., first bar only)

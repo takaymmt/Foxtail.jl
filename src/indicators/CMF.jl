@@ -85,7 +85,10 @@ result = CMF(prices; n=2)
             sum_vol -= volumes[i - n]
         end
 
-        if sum_vol == 0.0
+        # Clamp to zero: FP drift from repeated add/subtract can yield tiny negatives
+        sum_vol = max(0.0, sum_vol)
+
+        if sum_vol <= 0.0
             results[i] = 0.0
         else
             results[i] = sum_mfv / sum_vol
