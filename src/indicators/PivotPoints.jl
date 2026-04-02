@@ -47,27 +47,24 @@ result = PivotPoints(prices; method=:Classic)
         throw(ArgumentError("prices matrix must have 4 columns [High, Low, Close, Open]"))
     end
 
-    len = size(prices, 1)
+    nrows = size(prices, 1)
 
     highs  = @view prices[:, 1]
     lows   = @view prices[:, 2]
     closes = @view prices[:, 3]
     opens  = @view prices[:, 4]
 
+    result = method == :DeMark ? fill(NaN, nrows, 7) : zeros(nrows, 7)
+
     if method == :Classic
-        result = zeros(len, 7)
         _pivot_classic!(result, highs, lows, closes)
     elseif method == :Fibonacci
-        result = zeros(len, 7)
         _pivot_fibonacci!(result, highs, lows, closes)
     elseif method == :Woodie
-        result = zeros(len, 7)
-        _pivot_woodie!(result, highs, lows, closes, opens)
+        _pivot_woodie!(result, highs, lows, opens)
     elseif method == :Camarilla
-        result = zeros(len, 7)
         _pivot_camarilla!(result, highs, lows, closes)
     elseif method == :DeMark
-        result = fill(NaN, len, 7)
         _pivot_demark!(result, highs, lows, closes, opens)
     else
         throw(ArgumentError("Unknown method: $method. Valid: :Classic, :Fibonacci, :Woodie, :Camarilla, :DeMark"))
@@ -126,7 +123,6 @@ end
     result::Matrix{Float64},
     highs::AbstractVector{Float64},
     lows::AbstractVector{Float64},
-    closes::AbstractVector{Float64},
     opens::AbstractVector{Float64}
 )
     @inbounds for i in eachindex(highs)

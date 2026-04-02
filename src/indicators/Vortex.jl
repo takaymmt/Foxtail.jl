@@ -49,27 +49,14 @@ result = Vortex(prices; n=2)
         throw(ArgumentError("period n must be positive"))
     end
 
-    len = size(prices, 1)
+    nrows = size(prices, 1)
 
-    highs = @view prices[:, 1]
-    lows  = @view prices[:, 2]
+    highs  = @view prices[:, 1]
+    lows   = @view prices[:, 2]
+    closes = @view prices[:, 3]
 
-    # Compute True Range using the existing TR function
-    tr_vals = TR(prices)
-
-    # Compute vortex movement
-    vm_plus  = zeros(len)
-    vm_minus = zeros(len)
-
-    # Bar 1: no previous bar, VM = 0.0 (already initialized)
-    @inbounds for i in 2:len
-        vm_plus[i]  = abs(highs[i] - lows[i-1])
-        vm_minus[i] = abs(lows[i] - highs[i-1])
-    end
-
-    # Rolling sums using CircBuff
-    vi_plus  = zeros(len)
-    vi_minus = zeros(len)
+    vi_plus  = zeros(nrows)
+    vi_minus = zeros(nrows)
 
     cb_vm_plus  = CircBuff{Float64}(n)
     cb_vm_minus = CircBuff{Float64}(n)
@@ -79,24 +66,32 @@ result = Vortex(prices; n=2)
     sum_vm_minus = 0.0
     sum_tr       = 0.0
 
-    @inbounds for i in 1:len
-        # Remove oldest element if buffer is full
+    @inbounds for i in 1:nrows
+        if i == 1
+            # Bar 1: no previous bar, VM = 0.0
+            vm_plus_i  = 0.0
+            vm_minus_i = 0.0
+            tr_i = highs[1] - lows[1]
+        else
+            vm_plus_i  = abs(highs[i] - lows[i-1])
+            vm_minus_i = abs(lows[i] - highs[i-1])
+            tr_i = max(highs[i] - lows[i], abs(highs[i] - closes[i-1]), abs(lows[i] - closes[i-1]))
+        end
+
         if isfull(cb_vm_plus)
             sum_vm_plus  -= first(cb_vm_plus)
             sum_vm_minus -= first(cb_vm_minus)
             sum_tr       -= first(cb_tr)
         end
 
-        # Add new element
-        push!(cb_vm_plus, vm_plus[i])
-        push!(cb_vm_minus, vm_minus[i])
-        push!(cb_tr, tr_vals[i])
+        push!(cb_vm_plus, vm_plus_i)
+        push!(cb_vm_minus, vm_minus_i)
+        push!(cb_tr, tr_i)
 
-        sum_vm_plus  += vm_plus[i]
-        sum_vm_minus += vm_minus[i]
-        sum_tr       += tr_vals[i]
+        sum_vm_plus  += vm_plus_i
+        sum_vm_minus += vm_minus_i
+        sum_tr       += tr_i
 
-        # Compute VI+ and VI-
         if sum_tr > 0.0
             vi_plus[i]  = sum_vm_plus / sum_tr
             vi_minus[i] = sum_vm_minus / sum_tr

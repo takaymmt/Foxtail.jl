@@ -68,18 +68,7 @@ result = UltimateOsc(prices; fast=2, medium=3, slow=3)
     lows   = @view prices[:, 2]
     closes = @view prices[:, 3]
 
-    # Compute True Range using existing TR function
-    tr_vals = TR(prices)
-
-    # Compute Buying Pressure
-    bp = zeros(nrows)
-    @inbounds for i in 2:nrows
-        true_low = min(lows[i], closes[i-1])
-        bp[i] = closes[i] - true_low
-    end
-    # Bar 1: bp[1] = 0.0 (no previous close)
-
-    # 6 CircBuffs for rolling sums with O(1) running sums: bp and tr for each period
+    # 6 CircBuffs: bp + tr for each of the 3 periods
     bp_fast_cb   = CircBuff{Float64}(fast)
     bp_medium_cb = CircBuff{Float64}(medium)
     bp_slow_cb   = CircBuff{Float64}(slow)
@@ -95,7 +84,16 @@ result = UltimateOsc(prices; fast=2, medium=3, slow=3)
     sum_tr_slow   = 0.0
 
     @inbounds for i in 1:nrows
-        # Remove oldest elements if buffers are full
+        if i == 1
+            # Bar 1: no previous close, bp=0 and tr=H-L
+            bp_i = 0.0
+            tr_i = highs[1] - lows[1]
+        else
+            true_low = min(lows[i], closes[i-1])
+            bp_i = closes[i] - true_low
+            tr_i = max(highs[i] - lows[i], abs(highs[i] - closes[i-1]), abs(lows[i] - closes[i-1]))
+        end
+
         if isfull(bp_fast_cb)
             sum_bp_fast -= first(bp_fast_cb)
             sum_tr_fast -= first(tr_fast_cb)
@@ -109,28 +107,25 @@ result = UltimateOsc(prices; fast=2, medium=3, slow=3)
             sum_tr_slow -= first(tr_slow_cb)
         end
 
-        # Push new values
-        push!(bp_fast_cb, bp[i])
-        push!(bp_medium_cb, bp[i])
-        push!(bp_slow_cb, bp[i])
-        push!(tr_fast_cb, tr_vals[i])
-        push!(tr_medium_cb, tr_vals[i])
-        push!(tr_slow_cb, tr_vals[i])
+        push!(bp_fast_cb, bp_i)
+        push!(bp_medium_cb, bp_i)
+        push!(bp_slow_cb, bp_i)
+        push!(tr_fast_cb, tr_i)
+        push!(tr_medium_cb, tr_i)
+        push!(tr_slow_cb, tr_i)
 
-        # Update running sums
-        sum_bp_fast   += bp[i]
-        sum_bp_medium += bp[i]
-        sum_bp_slow   += bp[i]
-        sum_tr_fast   += tr_vals[i]
-        sum_tr_medium += tr_vals[i]
-        sum_tr_slow   += tr_vals[i]
+        sum_bp_fast   += bp_i
+        sum_bp_medium += bp_i
+        sum_bp_slow   += bp_i
+        sum_tr_fast   += tr_i
+        sum_tr_medium += tr_i
+        sum_tr_slow   += tr_i
 
-        # Compute averages with division-by-zero guard
+        # Guard: division by zero when all TR is zero
         avg_fast   = sum_tr_fast   == 0.0 ? 0.0 : sum_bp_fast   / sum_tr_fast
         avg_medium = sum_tr_medium == 0.0 ? 0.0 : sum_bp_medium / sum_tr_medium
         avg_slow   = sum_tr_slow   == 0.0 ? 0.0 : sum_bp_slow   / sum_tr_slow
 
-        # Weighted combination
         results[i] = 100.0 * (4.0 * avg_fast + 2.0 * avg_medium + 1.0 * avg_slow) / 7.0
     end
 

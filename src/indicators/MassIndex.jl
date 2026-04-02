@@ -59,38 +59,24 @@ result = MassIndex(prices; n=3, ema_period=2)
     highs = @view prices[:, 1]
     lows  = @view prices[:, 2]
 
-    # Step 1: Compute high-low range
     range_vec = Vector{Float64}(undef, nrows)
     @inbounds for i in 1:nrows
         range_vec[i] = highs[i] - lows[i]
     end
 
-    # Step 2: Single EMA of range
     single_ema = EMA(range_vec; n=ema_period)
-
-    # Step 3: Double EMA (EMA of single EMA)
     double_ema = EMA(single_ema; n=ema_period)
 
-    # Step 4: Compute ratio with division-by-zero guard
-    ratio = Vector{Float64}(undef, nrows)
-    @inbounds for i in 1:nrows
-        if double_ema[i] == 0.0
-            ratio[i] = 0.0
-        else
-            ratio[i] = single_ema[i] / double_ema[i]
-        end
-    end
-
-    # Step 5: Rolling sum of ratio using CircBuff with O(1) running sum
+    # O(1) running sum
     cb = CircBuff{Float64}(n)
     running_sum = 0.0
-
     @inbounds for i in 1:nrows
+        ratio_i = double_ema[i] == 0.0 ? 0.0 : single_ema[i] / double_ema[i]
         if isfull(cb)
             running_sum -= first(cb)
         end
-        push!(cb, ratio[i])
-        running_sum += ratio[i]
+        push!(cb, ratio_i)
+        running_sum += ratio_i
         results[i] = running_sum
     end
 

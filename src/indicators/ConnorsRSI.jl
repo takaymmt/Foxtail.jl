@@ -43,11 +43,17 @@ crsi = ConnorsRSI(prices; n_rsi=3, n_streak=2, n_pctrank=5)
     n_rsi::Int=3,
     n_streak::Int=2,
     n_pctrank::Int=100
-)::Vector{Float64}
+)
     len = length(prices)
-    n_rsi >= 1 || throw(ArgumentError("n_rsi must be positive"))
-    n_streak >= 1 || throw(ArgumentError("n_streak must be positive"))
-    n_pctrank >= 1 || throw(ArgumentError("n_pctrank must be positive"))
+    if n_rsi < 1
+        throw(ArgumentError("n_rsi must be positive"))
+    end
+    if n_streak < 1
+        throw(ArgumentError("n_streak must be positive"))
+    end
+    if n_pctrank < 1
+        throw(ArgumentError("n_pctrank must be positive"))
+    end
     min_len = max(n_rsi, n_streak) + 2
     len >= min_len || throw(ArgumentError("prices must have at least max(n_rsi, n_streak) + 2 = $min_len elements"))
 
@@ -63,7 +69,7 @@ crsi = ConnorsRSI(prices; n_rsi=3, n_streak=2, n_pctrank=5)
     pct_rank = _percentile_rank(roc1, n_pctrank)
 
     # Composite: average of three components
-    return (rsi_price .+ rsi_streak .+ pct_rank) ./ 3.0
+    return @. (rsi_price + rsi_streak + pct_rank) / 3.0
 end
 
 """
@@ -78,11 +84,11 @@ Returns integer-valued Float64 vector:
 
 Equal consecutive closes reset the streak to 0 per Connors' original specification.
 """
-function _streak(prices::Vector{Float64})::Vector{Float64}
-    n = length(prices)
-    streaks = zeros(Float64, n)
+function _streak(prices::Vector{Float64})
+    len = length(prices)
+    streaks = zeros(Float64, len)
     # streaks[1] = 0.0 (no previous bar)
-    @inbounds for i in 2:n
+    @inbounds for i in 2:len
         if prices[i] > prices[i-1]
             streaks[i] = max(streaks[i-1], 0.0) + 1.0
         elseif prices[i] < prices[i-1]
@@ -107,7 +113,7 @@ that are strictly less than the current value, divided by the window size, times
 - First value (i=1): 0.0 (no previous data).
 - Output range: [0.0, 100.0].
 """
-function _percentile_rank(data::Vector{Float64}, lookback::Int)::Vector{Float64}
+function _percentile_rank(data::Vector{Float64}, lookback::Int)
     n = length(data)
     result = zeros(Float64, n)
     @inbounds for i in 2:n
