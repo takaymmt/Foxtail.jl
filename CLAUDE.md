@@ -70,6 +70,16 @@
 - 既存ルールは `.claude/rules/` を最優先で参照
 - 研究メモは `.claude/docs/research/` に蓄積（テンプレート配布時は空を維持）
 
+## Session History
+
+### 2026-04-01
+- 1 commit (`dd32c67`), 29 files, +3313/-15 lines
+- Agent Teams: Researcher (market survey) + Architect (codebase analysis) parallel
+- **17 indicators added** (TDD, 2932→3702 tests): ROC, DonchianChannel, KeltnerChannel, Supertrend, DMI/ADX, VWAP, CCI, PPO, ForceIndex, MFI, CMF, Aroon, VPT, NVI, PVI, SqueezeMomentum, ParabolicSAR, Ichimoku, KST, DPO, EMV
+- MinMaxQueue: `get_max_idx`/`get_min_idx` 追加
+- Key decisions: macro.jl 変更不要、Ichimoku は手書きラッパーで N+26 行出力、VIX はスコープ外
+- Remaining: Pivot Points ★★★★, Connors RSI ★★★, Vortex ★★, Ultimate Oscillator ★★, Mass Index ★
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # @orchestra:local-boundary
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
