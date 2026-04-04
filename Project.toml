@@ -12,7 +12,7 @@ TSFrames = "9f90e835-9451-4aaa-bcb1-743a1b8d2f84"
 [compat]
 CSV = "0.10.15"
 LinearAlgebra = "1.11.0"
-TSFrames = "0.2"
+TSFrames = "0.3"
 julia = "1.11"
 
 [sources]

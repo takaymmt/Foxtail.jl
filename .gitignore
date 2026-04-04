@@ -37,3 +37,9 @@ Manifest.toml
 /tmp
 
 *_WIP.jl
+
+# Agents
+CLAUDE.md
+.claude/*
+.codex/*
+.gemini/*
